@@ -11,7 +11,7 @@ services:
       - FLASK_APP=app:app  # Assuming your Flask app instance is named 'app' in app/__init__.py
       - FLASK_ENV=development
     volumes:
-      - ./:/usr/src/app    # mount project root so /usr/src/app/app is the package
+      - ./:/usr/src/app    # mount project root so /usr/src/app/app is the packages
     ports:
       - "5100:5000"  # Expose Flask app on port 5000
     command: ["conda", "run", "--no-capture-output", "-n", "pcd", "flask", "run", "--host=0.0.0.0", "--port=5000", "--reload"]
