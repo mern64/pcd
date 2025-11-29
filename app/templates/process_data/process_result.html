@@ -6,13 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
-    .card { max-width:960px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
+    .card { max-width:1100px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
     h1 { margin-top:0; font-size:1.6rem; }
     table { width:100%; border-collapse:collapse; margin-top:1.5rem; }
-    th, td { border:1px solid #e5e7eb; padding:0.5rem 0.75rem; font-size:0.9rem; }
+    th, td { border:1px solid #e5e7eb; padding:0.5rem 0.75rem; font-size:0.9rem; vertical-align:top; }
     th { background:#f9fafb; text-align:left; }
     .error { padding:0.75rem 1rem; background:#fee2e2; color:#991b1b; border-radius:8px; }
+    .flash { padding:0.75rem 1rem; border-radius:8px; font-size:0.9rem; margin-top:1rem; }
+    .flash.success { background:#dcfce7; color:#166534; }
+    .flash.error { background:#fee2e2; color:#991b1b; }
+    .flash.info { background:#e0f2fe; color:#075985; }
     .sub { color:#6b7280; font-size:0.9rem; }
+    .image-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1rem; margin-top:1rem; }
+    .image-card { border:1px solid #e5e7eb; border-radius:10px; padding:0.75rem; background:#f9fafb; display:flex; flex-direction:column; gap:0.5rem; }
+    .image-card.assigned { border-color:#2563eb; background:#eef2ff; }
+    .image-card img { width:100%; height:180px; object-fit:cover; border-radius:6px; border:1px solid #d1d5db; background:#fff; }
+    .image-card form { display:flex; flex-direction:column; gap:0.5rem; }
+    .image-card select, .image-card button { width:100%; padding:0.4rem 0.6rem; border-radius:6px; border:1px solid #cbd5f5; font-size:0.9rem; }
+    .image-card button { background:#2563eb; color:#fff; border:none; cursor:pointer; }
+    .image-card button.secondary { background:#fff; color:#1f2937; border:1px solid #cbd5f5; }
+    .image-note { font-size:0.85rem; color:#475569; }
   </style>
 </head>
 <body>
@@ -22,6 +35,14 @@
       System automatically extracts defect coordinates from the Metaroom data file (from DM_01)
       and prepares them to be stored in PostgreSQL with spatial coordinates.
     </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
     {% if error %}
       <div class="error">{{ error }}</div>
@@ -37,6 +58,7 @@
               <th>Y</th>
               <th>Z</th>
               <th>Source File</th>
+              <th>Image</th>
             </tr>
           </thead>
           <tbody>
@@ -48,6 +70,21 @@
                 <td>{{ "%.3f"|format(d.y) }}</td>
                 <td>{{ "%.3f"|format(d.z) }}</td>
                 <td>{{ d.source_file }}</td>
+                <td>
+                  {% if defect_assignments.get(d.id) %}
+                    {% set assigned_id = defect_assignments.get(d.id) %}
+                    {% for img in image_entries %}
+                      {% if img.id == assigned_id %}
+                        <div>
+                          <img src="{{ img.url }}" alt="Assigned image" style="width:140px; height:90px; object-fit:cover; border:1px solid #d1d5db; border-radius:6px;" />
+                          <div class="image-note">Page {{ img.page or '–' }}</div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    <span class="image-note">Unassigned</span>
+                  {% endif %}
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -84,6 +121,43 @@
         </table>
       {% else %}
         <p>No records prepared for PostgreSQL.</p>
+      {% endif %}
+
+      <h2>Defect Image Matching</h2>
+      {% if image_entries %}
+        <p class="sub">Link extracted PDF photos to the 3D defect markers so the viewer can show context.</p>
+        <div class="image-grid">
+          {% for img in image_entries %}
+            <div class="image-card {% if img.assigned_defect %}assigned{% endif %}">
+              <img src="{{ img.url }}" alt="Extracted defect image" />
+              <div class="image-note">Image ID: {{ img.id }} · Page {{ img.page or '–' }}</div>
+              {% if img.assigned_defect %}
+                <div class="image-note">Assigned to defect {{ img.assigned_defect }}</div>
+                <form method="post" action="{{ url_for('process_data.assign_image_to_defect') }}">
+                  <input type="hidden" name="image_id" value="{{ img.id }}" />
+                  <input type="hidden" name="action" value="unassign" />
+                  <button type="submit" class="secondary">Unassign</button>
+                </form>
+              {% elif defects %}
+                <form method="post" action="{{ url_for('process_data.assign_image_to_defect') }}">
+                  <input type="hidden" name="image_id" value="{{ img.id }}" />
+                  <label for="select-{{ img.id }}" class="image-note">Select defect:</label>
+                  <select id="select-{{ img.id }}" name="defect_id" required>
+                    <option value="" disabled selected>Choose defect…</option>
+                    {% for d in defects %}
+                      <option value="{{ d.id }}">{{ d.id }} – {{ d.description }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit">Link to defect</button>
+                </form>
+              {% else %}
+                <span class="image-note">Upload a GLB to extract defects before assigning images.</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p>No images were extracted from the uploaded PDF.</p>
       {% endif %}
     {% endif %}
   </main>

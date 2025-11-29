@@ -34,7 +34,7 @@
       {% endif %}
     {% endwith %}
 
-    <form method="post" action="{{ url_for('module1.upload_scan_data') }}" enctype="multipart/form-data">
+    <form method="post" action="{{ url_for('upload_data.upload_scan_data') }}" enctype="multipart/form-data">
       <label for="glb_model">GLB 3D Model File</label>
       <input id="glb_model" name="glb_model" type="file" accept=".glb" required />
       <span class="help">Allowed type: .glb</span>
