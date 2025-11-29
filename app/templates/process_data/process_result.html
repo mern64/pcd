@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Module 2 – Process Defect File</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
+    .card { max-width:960px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
+    h1 { margin-top:0; font-size:1.6rem; }
+    table { width:100%; border-collapse:collapse; margin-top:1.5rem; }
+    th, td { border:1px solid #e5e7eb; padding:0.5rem 0.75rem; font-size:0.9rem; }
+    th { background:#f9fafb; text-align:left; }
+    .error { padding:0.75rem 1rem; background:#fee2e2; color:#991b1b; border-radius:8px; }
+    .sub { color:#6b7280; font-size:0.9rem; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Module 2 – Process Defect File</h1>
+    <p class="sub">
+      System automatically extracts defect coordinates from the Metaroom data file (from DM_01)
+      and prepares them to be stored in PostgreSQL with spatial coordinates.
+    </p>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% else %}
+      <h2>Extracted Defects</h2>
+      {% if defects %}
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Description</th>
+              <th>X</th>
+              <th>Y</th>
+              <th>Z</th>
+              <th>Source File</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in defects %}
+              <tr>
+                <td>{{ d.id }}</td>
+                <td>{{ d.description }}</td>
+                <td>{{ "%.3f"|format(d.x) }}</td>
+                <td>{{ "%.3f"|format(d.y) }}</td>
+                <td>{{ "%.3f"|format(d.z) }}</td>
+                <td>{{ d.source_file }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No defects were found in the file.</p>
+      {% endif %}
+
+      <h2>Prepared PostgreSQL Records (Preview)</h2>
+      {% if prepared_records %}
+        <table>
+          <thead>
+            <tr>
+              <th>Defect ID</th>
+              <th>Description</th>
+              <th>X</th>
+              <th>Y</th>
+              <th>Z</th>
+              <th>WKT Point</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in prepared_records %}
+              <tr>
+                <td>{{ r.defect_id }}</td>
+                <td>{{ r.description }}</td>
+                <td>{{ "%.3f"|format(r.x) }}</td>
+                <td>{{ "%.3f"|format(r.y) }}</td>
+                <td>{{ "%.3f"|format(r.z) }}</td>
+                <td>{{ r.wkt_point }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>No records prepared for PostgreSQL.</p>
+      {% endif %}
+    {% endif %}
+  </main>
+</body>
+</html>

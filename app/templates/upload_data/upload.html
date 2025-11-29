@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Module 1 – Upload Scan Data (DM_01)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
+    .card { max-width:640px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
+    h1 { margin-top:0; font-size:1.6rem; }
+    label { display:block; margin:1rem 0 0.25rem; font-weight:600; }
+    input[type=file], textarea, button { width:100%; border-radius:8px; border:1px solid #d1d5db; padding:0.75rem 0.9rem; font-size:1rem; }
+    textarea { min-height:140px; resize:vertical; }
+    button { margin-top:1rem; background:#2563eb; color:#fff; border:none; cursor:pointer; font-weight:600; }
+    .help { font-size:0.9rem; color:#4b5563; margin-top:0.25rem; }
+    .flash { padding:0.75rem 1rem; margin-bottom:1rem; border-radius:8px; font-size:0.95rem; }
+    .flash.error { background:#fee2e2; color:#991b1b; }
+    .flash.success { background:#dcfce7; color:#166534; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Upload Scan Data (DM_01)</h1>
+    <p class="help">
+      Homeowner / Inspector can upload the 3D GLB model and the PDF data report.
+      After upload, the system stores the files and starts automated processing.
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('module1.upload_scan_data') }}" enctype="multipart/form-data">
+      <label for="glb_model">GLB 3D Model File</label>
+      <input id="glb_model" name="glb_model" type="file" accept=".glb" required />
+      <span class="help">Allowed type: .glb</span>
+
+      <label for="pdf_report">PDF Data / Defect Report</label>
+      <input id="pdf_report" name="pdf_report" type="file" accept="application/pdf" required />
+      <span class="help">Include the inspection or defect report in PDF format.</span>
+
+      <label for="notes">Additional Notes (optional)</label>
+      <textarea id="notes" name="notes" placeholder="E.g. location, reference number, inspection date..."></textarea>
+
+      <button type="submit">Upload & Start Processing</button>
+    </form>
+  </main>
+</body>
+</html>
