@@ -4,11 +4,13 @@
   <meta charset="UTF-8" />
   <title>Module 2 – Process Defect File</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
     .card { max-width:1100px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
     h1 { margin-top:0; font-size:1.6rem; }
-    table { width:100%; border-collapse:collapse; margin-top:1.5rem; }
+    h2 { margin-top:1.5rem; font-size:1.2rem; color:#1f2937; border-bottom: 2px solid #e5e7eb; padding-bottom: 0.5rem; }
+    table { width:100%; border-collapse:collapse; margin-top:1rem; }
     th, td { border:1px solid #e5e7eb; padding:0.5rem 0.75rem; font-size:0.9rem; vertical-align:top; }
     th { background:#f9fafb; text-align:left; }
     .error { padding:0.75rem 1rem; background:#fee2e2; color:#991b1b; border-radius:8px; }
@@ -17,6 +19,15 @@
     .flash.error { background:#fee2e2; color:#991b1b; }
     .flash.info { background:#e0f2fe; color:#075985; }
     .sub { color:#6b7280; font-size:0.9rem; }
+    
+    /* Upload Details Card */
+    .upload-details { background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:1.25rem; margin-bottom:1.5rem; }
+    .upload-details h3 { margin:0 0 1rem 0; font-size:1.1rem; color:#0369a1; }
+    .details-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; }
+    .detail-item { background:#fff; padding:0.75rem; border-radius:6px; border:1px solid #e0f2fe; }
+    .detail-label { font-size:0.75rem; color:#64748b; text-transform:uppercase; font-weight:600; margin-bottom:0.25rem; }
+    .detail-value { font-size:0.95rem; color:#1e293b; word-break:break-word; }
+    
     .image-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:1rem; margin-top:1rem; }
     .image-card { border:1px solid #e5e7eb; border-radius:10px; padding:0.75rem; background:#f9fafb; display:flex; flex-direction:column; gap:0.5rem; }
     .image-card.assigned { border-color:#2563eb; background:#eef2ff; }
@@ -26,14 +37,27 @@
     .image-card button { background:#2563eb; color:#fff; border:none; cursor:pointer; }
     .image-card button.secondary { background:#fff; color:#1f2937; border:1px solid #cbd5f5; }
     .image-note { font-size:0.85rem; color:#475569; }
+    
+    /* Back button */
+    .back-link { display: inline-flex; align-items: center; gap: 8px; color: #3b82f6; text-decoration: none; font-weight: 600; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .back-link:hover { color: #2563eb; }
+    
+    /* Save Form */
+    .save-form { background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:1.25rem; margin-top:1.5rem; }
+    .save-form label { font-weight:600; color:#166534; }
+    .save-form input[type=text] { padding:0.6rem 0.8rem; border:1px solid #86efac; border-radius:6px; width:350px; font-size:1rem; }
+    .save-form button { padding:0.6rem 1.5rem; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:1rem; }
+    .save-form button:hover { background:#15803d; }
   </style>
 </head>
 <body>
   <main class="card">
+    <a href="/projects" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Projects
+    </a>
     <h1>Module 2 – Process Defect File</h1>
     <p class="sub">
-      System automatically extracts defect coordinates from the Metaroom data file (from DM_01)
-      and prepares them to be stored in PostgreSQL with spatial coordinates.
+      Review the extracted defect data and link images before saving to the database.
     </p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -47,29 +71,65 @@
     {% if error %}
       <div class="error">{{ error }}</div>
     {% else %}
+      
+      <!-- Upload Details Section -->
+      {% if upload_metadata %}
+      <div class="upload-details">
+        <h3>📋 Upload Details</h3>
+        <div class="details-grid">
+          <div class="detail-item">
+            <div class="detail-label">Project Name</div>
+            <div class="detail-value">{{ upload_metadata.project_name or '–' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Inspection Date</div>
+            <div class="detail-value">{{ upload_metadata.scan_date or '–' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Unit No.</div>
+            <div class="detail-value">{{ upload_metadata.unit_no or '–' }}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Address</div>
+            <div class="detail-value">{{ upload_metadata.address or '–' }}</div>
+          </div>
+          {% if upload_metadata.glb_path %}
+          <div class="detail-item">
+            <div class="detail-label">GLB Model</div>
+            <div class="detail-value">{{ upload_metadata.glb_path.split('/')[-1] }}</div>
+          </div>
+          {% endif %}
+          {% if upload_metadata.notes %}
+          <div class="detail-item" style="grid-column: span 2;">
+            <div class="detail-label">Notes</div>
+            <div class="detail-value">{{ upload_metadata.notes }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       <h2>Extracted Defects</h2>
       {% if defects %}
         <table>
           <thead>
             <tr>
-              <th>ID</th>
+              <th>#</th>
               <th>Description</th>
               <th>X</th>
               <th>Y</th>
               <th>Z</th>
-              <th>Source File</th>
               <th>Image</th>
             </tr>
           </thead>
           <tbody>
             {% for d in defects %}
               <tr>
-                <td>{{ d.id }}</td>
+                <td>{{ loop.index }}</td>
                 <td>{{ d.description }}</td>
                 <td>{{ "%.3f"|format(d.x) }}</td>
                 <td>{{ "%.3f"|format(d.y) }}</td>
                 <td>{{ "%.3f"|format(d.z) }}</td>
-                <td>{{ d.source_file }}</td>
                 <td>
                   {% if defect_assignments.get(d.id) %}
                     {% set assigned_id = defect_assignments.get(d.id) %}
@@ -91,36 +151,6 @@
         </table>
       {% else %}
         <p>No defects were found in the file.</p>
-      {% endif %}
-
-      <h2>Prepared PostgreSQL Records (Preview)</h2>
-      {% if prepared_records %}
-        <table>
-          <thead>
-            <tr>
-              <th>Defect ID</th>
-              <th>Description</th>
-              <th>X</th>
-              <th>Y</th>
-              <th>Z</th>
-              <th>WKT Point</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in prepared_records %}
-              <tr>
-                <td>{{ r.defect_id }}</td>
-                <td>{{ r.description }}</td>
-                <td>{{ "%.3f"|format(r.x) }}</td>
-                <td>{{ "%.3f"|format(r.y) }}</td>
-                <td>{{ "%.3f"|format(r.z) }}</td>
-                <td>{{ r.wkt_point }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p>No records prepared for PostgreSQL.</p>
       {% endif %}
 
       <h2>Defect Image Matching</h2>
@@ -145,7 +175,7 @@
                   <select id="select-{{ img.id }}" name="defect_id" required>
                     <option value="" disabled selected>Choose defect…</option>
                     {% for d in defects %}
-                      <option value="{{ d.id }}">{{ d.id }} – {{ d.description }}</option>
+                      <option value="{{ d.id }}">{{ loop.index }} – {{ d.description }}</option>
                     {% endfor %}
                   </select>
                   <button type="submit">Link to defect</button>
@@ -158,6 +188,17 @@
         </div>
       {% else %}
         <p>No images were extracted from the uploaded PDF.</p>
+      {% endif %}
+
+      {% if defects %}
+        <h2>Save to Database</h2>
+        <div class="save-form">
+          <form method="post">
+            <label for="scan_name">Scan Name:</label><br>
+            <input type="text" id="scan_name" name="scan_name" value="{{ default_scan_name }}" required style="margin-top:0.5rem;">
+            <button type="submit" name="save_to_db" value="yes" style="margin-left:1rem;">Save Defects to Database</button>
+          </form>
+        </div>
       {% endif %}
     {% endif %}
   </main>

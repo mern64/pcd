@@ -24,6 +24,9 @@ try:
 except ImportError:  # pragma: no cover
     GLTF2 = None
 
+from app.extensions import db
+from app.models import Scan, Defect
+
 
 process_data_bp = Blueprint("process_data", __name__)
 
@@ -36,6 +39,9 @@ class DefectRecord:
     y: float
     z: float
     source_file: str
+    element: Optional[str] = None
+    defect_type: str = "Unknown"
+    severity: str = "Medium"
 
 
 def _processed_root() -> str:
@@ -111,6 +117,9 @@ def _prepare_for_postgres(defects: List[DefectRecord]) -> List[dict]:
             {
                 "defect_id": record.id,
                 "description": record.description,
+                "element": record.element,
+                "defect_type": record.defect_type,
+                "severity": record.severity,
                 "x": record.x,
                 "y": record.y,
                 "z": record.z,
@@ -136,6 +145,9 @@ def _parse_defects_from_glb(defect_filepath: str) -> List[DefectRecord]:
                 y=snapshot.coordinates[1],
                 z=snapshot.coordinates[2],
                 source_file=os.path.basename(defect_filepath),
+                element=snapshot.element,
+                defect_type="Unknown",
+                severity="Medium",
             )
         )
     return defects
@@ -234,8 +246,58 @@ def _render_error(message: str):
     )
 
 
-@process_data_bp.route("/process-data", methods=["GET"])
+@process_data_bp.route("/process-data", methods=["GET", "POST"])
 def process_defect_file():
+    if request.method == "POST" and "save_to_db" in request.form:
+        defects, source_path, source_kind = _load_defects()
+        if not defects:
+            flash("No defects to save.", "error")
+            return redirect(url_for("process_data.process_defect_file"))
+
+        # Load metadata for image assignments
+        metadata = _load_latest_metadata()
+        defect_assignments = _defect_assignments_map(metadata) if metadata else {}
+
+        # Create a new scan
+        scan_name = request.form.get("scan_name", f"Scan from {source_kind}")
+        glb_file = _load_glb_defect_file()  # Get the GLB path
+        model_path = os.path.basename(glb_file) if glb_file else None
+        scan = Scan(name=scan_name, model_path=model_path)
+        db.session.add(scan)
+        db.session.commit()
+
+        # Create defects with image assignments
+        for rec in _prepare_for_postgres(defects):
+            # Get image path for this defect if assigned
+            image_path = None
+            defect_id_str = str(rec["defect_id"])
+            if defect_id_str in defect_assignments and metadata:
+                image_id = defect_assignments[defect_id_str]
+                resolved = _resolve_image(metadata, image_id)
+                if resolved:
+                    image_dir, filename = resolved
+                    # Store relative path from upload_data folder
+                    image_path = os.path.join(os.path.basename(image_dir), filename)
+
+            defect = Defect(
+                scan_id=scan.id,
+                x=rec["x"],
+                y=rec["y"],
+                z=rec["z"],
+                element=rec.get("element"),
+                defect_type=rec.get("defect_type", "Unknown"),
+                severity=rec.get("severity", "Medium"),
+                description=rec.get("description", ""),
+                status="Reported",
+                image_path=image_path,
+            )
+            db.session.add(defect)
+        db.session.commit()
+
+        flash(f"Defects saved to database. Scan ID: {scan.id}", "success")
+        return redirect(url_for("defects.visualize_scan", scan_id=scan.id))
+
+    # GET logic
     defects, source_path, source_kind = _load_defects()
     metadata = _load_latest_metadata()
     image_entries = _image_entries(metadata)
@@ -261,6 +323,14 @@ def process_defect_file():
     if not defects and source_kind == "glb":
         error = "No Snapshot metadata found inside the GLB file."
 
+    # Get next scan ID for default name
+    last_scan = Scan.query.order_by(Scan.id.desc()).first()
+    next_scan_id = (last_scan.id + 1) if last_scan else 1
+    
+    # Get project name from metadata for default scan name
+    project_name = metadata.get("project_name", "Scan") if metadata else "Scan"
+    default_scan_name = f"scanID_{next_scan_id}_{project_name}"
+
     return render_template(
         "process_data/process_result.html",
         error=error,
@@ -268,6 +338,8 @@ def process_defect_file():
         prepared_records=prepared_records,
         image_entries=image_entries,
         defect_assignments=defect_assignments,
+        upload_metadata=metadata,
+        default_scan_name=default_scan_name,
     )
 
 
@@ -327,7 +399,7 @@ def assign_image_to_defect():
 
     action = request.form.get("action", "assign")
     image_id = request.form.get("image_id")
-    defect_id = request.form.get("defect_id")
+    defect_id = request.form.get("defect_id")  # This is the snapshot name like "Snapshot-xxx"
 
     if not image_id:
         flash("Missing image selection.", "error")
@@ -335,9 +407,16 @@ def assign_image_to_defect():
 
     assignments = metadata.setdefault("assignments", {}).setdefault("defect_to_image", {})
 
-    if not _resolve_image(metadata, image_id):
+    resolved = _resolve_image(metadata, image_id)
+    if not resolved:
         flash("Selected image is no longer available.", "error")
         return redirect(url_for("process_data.process_defect_file"))
+
+    # Get the relative image path for database storage
+    # _resolve_image returns (image_dir, filename) tuple
+    image_dir, image_filename = resolved
+    image_dir_name = os.path.basename(image_dir)
+    relative_image_path = f"{image_dir_name}/{image_filename}"
 
     if action == "unassign":
         removed = False
@@ -345,6 +424,8 @@ def assign_image_to_defect():
             if assigned_image == image_id:
                 assignments.pop(defect_key)
                 removed = True
+                # Also update database - clear image_path for defects with this snapshot name
+                _update_defect_image_in_db(defect_key, None)
         if removed:
             flash("Image unassigned from defect.", "success")
         else:
@@ -357,8 +438,23 @@ def assign_image_to_defect():
         for defect_key, assigned_image in list(assignments.items()):
             if defect_key == defect_id or assigned_image == image_id:
                 assignments.pop(defect_key)
+                # Clear old assignments in database
+                _update_defect_image_in_db(defect_key, None)
+        
         assignments[defect_id] = image_id
+        # Update database with the image path
+        _update_defect_image_in_db(defect_id, relative_image_path)
         flash(f"Linked image to defect {defect_id}.", "success")
 
     _save_latest_metadata(metadata)
     return redirect(url_for("process_data.process_defect_file"))
+
+
+def _update_defect_image_in_db(snapshot_name: str, image_path: Optional[str]):
+    """Update defect image_path in database by matching snapshot name in description."""
+    # Find defects whose description contains this snapshot name
+    defects = Defect.query.filter(Defect.description.contains(snapshot_name)).all()
+    for defect in defects:
+        defect.image_path = image_path
+    if defects:
+        db.session.commit()

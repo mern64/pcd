@@ -31,6 +31,12 @@ def upload_scan_data():
 
     glb_file = request.files.get("glb_model")
     pdf_file = request.files.get("pdf_report")
+    project_name = request.form.get("project_name", "")
+    scan_date = request.form.get("scan_date", "")
+    address = request.form.get("address", "")
+    latitude = request.form.get("latitude", "")
+    longitude = request.form.get("longitude", "")
+    unit_no = request.form.get("unit_no", "")
     notes = request.form.get("notes", "")
 
     if not glb_file or glb_file.filename == "":
@@ -71,6 +77,12 @@ def upload_scan_data():
         {
             "id": upload_id,
             "created_at": timestamp,
+            "project_name": project_name,
+            "scan_date": scan_date,
+            "address": address,
+            "latitude": latitude,
+            "longitude": longitude,
+            "unit_no": unit_no,
             "glb_path": glb_path,
             "pdf_path": pdf_path,
             "image_dir": image_dir,
@@ -80,16 +92,19 @@ def upload_scan_data():
         },
     )
 
-    _start_automated_data_processing(glb_path, pdf_path, notes)
+    _start_automated_data_processing(glb_path, pdf_path, scan_date, address, unit_no, notes)
 
     flash("Scan data uploaded successfully. Automated processing has started.", "success")
     # Redirect to Module 2 (now process_data)
     return redirect(url_for("process_data.process_defect_file"))
 
-def _start_automated_data_processing(glb_path: str, pdf_path: str, notes: str) -> None:
+def _start_automated_data_processing(glb_path: str, pdf_path: str, scan_date: str, address: str, unit_no: str, notes: str) -> None:
     current_app.logger.info("Starting automated processing for:")
     current_app.logger.info("GLB: %s", glb_path)
     current_app.logger.info("PDF: %s", pdf_path)
+    current_app.logger.info("Scan Date: %s", scan_date)
+    current_app.logger.info("Address: %s", address)
+    current_app.logger.info("Unit No: %s", unit_no)
     if notes:
         current_app.logger.info("Notes: %s", notes)
     # TODO: implement real processing here

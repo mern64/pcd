@@ -4,22 +4,40 @@
   <meta charset="UTF-8" />
   <title>Module 1 – Upload Scan Data (DM_01)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
     .card { max-width:640px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
     h1 { margin-top:0; font-size:1.6rem; }
     label { display:block; margin:1rem 0 0.25rem; font-weight:600; }
-    input[type=file], textarea, button { width:100%; border-radius:8px; border:1px solid #d1d5db; padding:0.75rem 0.9rem; font-size:1rem; }
+    input[type=file], input[type=text], input[type=date], textarea, button { width:100%; border-radius:8px; border:1px solid #d1d5db; padding:0.75rem 0.9rem; font-size:1rem; box-sizing:border-box; }
     textarea { min-height:140px; resize:vertical; }
     button { margin-top:1rem; background:#2563eb; color:#fff; border:none; cursor:pointer; font-weight:600; }
     .help { font-size:0.9rem; color:#4b5563; margin-top:0.25rem; }
     .flash { padding:0.75rem 1rem; margin-bottom:1rem; border-radius:8px; font-size:0.95rem; }
     .flash.error { background:#fee2e2; color:#991b1b; }
     .flash.success { background:#dcfce7; color:#166534; }
+    
+    /* Back button */
+    .back-link { display: inline-flex; align-items: center; gap: 8px; color: #3b82f6; text-decoration: none; font-weight: 600; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .back-link:hover { color: #2563eb; }
+    
+    /* Address autocomplete styling */
+    .address-container { position: relative; }
+    .address-container input { padding-right: 40px; }
+    .address-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; pointer-events: none; }
+    .pac-container { border-radius: 8px; border: 1px solid #d1d5db; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-family: system-ui, sans-serif; margin-top: 4px; }
+    .pac-item { padding: 10px 12px; cursor: pointer; }
+    .pac-item:hover { background: #f3f4f6; }
+    .pac-item-query { font-size: 14px; }
+    .pac-matched { font-weight: 600; }
   </style>
 </head>
 <body>
   <main class="card">
+    <a href="/projects" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Projects
+    </a>
     <h1>Upload Scan Data (DM_01)</h1>
     <p class="help">
       Homeowner / Inspector can upload the 3D GLB model and the PDF data report.
@@ -35,6 +53,10 @@
     {% endwith %}
 
     <form method="post" action="{{ url_for('upload_data.upload_scan_data') }}" enctype="multipart/form-data">
+      <label for="project_name">Project Name</label>
+      <input id="project_name" name="project_name" type="text" placeholder="e.g. House Inspection 2025" required />
+      <span class="help">A name to identify this scan project.</span>
+
       <label for="glb_model">GLB 3D Model File</label>
       <input id="glb_model" name="glb_model" type="file" accept=".glb" required />
       <span class="help">Allowed type: .glb</span>
@@ -43,11 +65,121 @@
       <input id="pdf_report" name="pdf_report" type="file" accept="application/pdf" required />
       <span class="help">Include the inspection or defect report in PDF format.</span>
 
+      <label for="scan_date">Inspection Date</label>
+      <input id="scan_date" name="scan_date" type="date" required />
+      <span class="help">Date when the scan/inspection was performed.</span>
+
+      <label for="address">Property Address</label>
+      <div class="address-container">
+        <input id="address" name="address" type="text" placeholder="Start typing to search address..." autocomplete="off" required />
+        <span class="address-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+        </span>
+      </div>
+      <span class="help">Search and select address from Google Maps.</span>
+      <!-- Hidden fields to store lat/lng -->
+      <input type="hidden" id="latitude" name="latitude" />
+      <input type="hidden" id="longitude" name="longitude" />
+
+      <label for="unit_no">Unit No.</label>
+      <input id="unit_no" name="unit_no" type="text" placeholder="e.g. #12-345, Block A" required />
+      <span class="help">Unit number, block, or specific location within the property.</span>
+
       <label for="notes">Additional Notes (optional)</label>
-      <textarea id="notes" name="notes" placeholder="E.g. location, reference number, inspection date..."></textarea>
+      <textarea id="notes" name="notes" placeholder="Any additional details or comments..."></textarea>
 
       <button type="submit">Upload & Start Processing</button>
     </form>
   </main>
+
+  <!-- Google Maps Places API with proper async loading -->
+  <script>
+    let autocompleteInitialized = false;
+    
+    function initAutocomplete() {
+      try {
+        const addressInput = document.getElementById('address');
+        
+        // Initialize Google Places Autocomplete
+        const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+          types: ['address'],
+          fields: ['formatted_address', 'geometry', 'name']
+        });
+        
+        // When user selects an address from the dropdown
+        autocomplete.addListener('place_changed', function() {
+          const place = autocomplete.getPlace();
+          
+          if (place.geometry) {
+            // Store latitude and longitude
+            document.getElementById('latitude').value = place.geometry.location.lat();
+            document.getElementById('longitude').value = place.geometry.location.lng();
+            
+            // Use formatted address
+            addressInput.value = place.formatted_address || place.name;
+          }
+        });
+        
+        // Prevent form submission on Enter in address field
+        addressInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            const pacContainer = document.querySelector('.pac-container');
+            if (pacContainer && pacContainer.style.display !== 'none') {
+              e.preventDefault();
+            }
+          }
+        });
+        
+        autocompleteInitialized = true;
+        console.log('Google Maps Autocomplete initialized successfully');
+      } catch (error) {
+        console.error('Error initializing Google Maps Autocomplete:', error);
+        document.getElementById('address').placeholder = 'Enter address manually';
+      }
+    }
+    
+    // Handle Google Maps API errors
+    function gm_authFailure() {
+      console.error('Google Maps authentication failed.');
+      document.getElementById('address').placeholder = 'Enter address manually';
+    }
+    
+    // Load Google Maps API dynamically with proper async loading
+    (function(g){
+      var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;
+      b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,
+      u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));
+      e.set("libraries","places");
+      e.set("callback",c+".maps."+q);
+      e.set("key","AIzaSyBPu6GVAXNgkkDDwWiyCPHa14dpRlsiN-w");
+      a.src="https://maps.googleapis.com/maps/api/js?"+e;
+      d[q]=f;
+      a.onerror=()=>h=n(Error(p+" could not load."));
+      a.nonce=m.querySelector("script[nonce]")?.nonce||"";
+      m.head.append(a)}));
+      d[l]?console.warn(p+" only loads once."):(d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n)));
+    })();
+    
+    // Initialize when DOM is ready
+    google.maps.importLibrary("places").then(() => {
+      initAutocomplete();
+    }).catch((error) => {
+      console.error('Failed to load Google Maps:', error);
+      document.getElementById('address').placeholder = 'Enter address manually';
+    });
+  </script>
+  
+  <!-- Fallback if Google Maps fails to load -->
+  <script>
+    window.setTimeout(function() {
+      if (!autocompleteInitialized) {
+        console.warn('Google Maps API not loaded. Address autocomplete disabled.');
+        document.getElementById('address').placeholder = 'Enter address manually (e.g. 123 Main St, Singapore 123456)';
+      }
+    }, 8000);
+  </script>
 </body>
 </html>

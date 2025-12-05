@@ -23,6 +23,7 @@ class SnapshotRecord:
     label: str
     coordinates: Tuple[float, float, float]
     source_node: Optional[str]
+    element: Optional[str] = None  # Extracted from mesh/node name
 
 
 def _as_dict(obj: Any) -> Optional[Dict[str, Any]]:
@@ -114,6 +115,13 @@ def extract_snapshots_from_nodes(nodes: Iterable[Any]) -> List[SnapshotRecord]:
             or f"snapshot_{idx}"
         )
         label = snapshot.get("label") or snapshot.get("description") or node_name or "Snapshot"
+        
+        # Extract element from node name (e.g., "IfcBuildingElementProxy/Snapshot-xxx")
+        element = None
+        if node_name:
+            parts = node_name.split("/")
+            if len(parts) >= 2:
+                element = parts[0]  # e.g., "IfcBuildingElementProxy"
 
         snapshots.append(
             SnapshotRecord(
@@ -121,6 +129,7 @@ def extract_snapshots_from_nodes(nodes: Iterable[Any]) -> List[SnapshotRecord]:
                 label=str(label),
                 coordinates=coords,
                 source_node=node_name,
+                element=element,
             )
         )
 
