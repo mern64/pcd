@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- @ts-nocheck - This is a Jinja2 template file -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -453,6 +454,220 @@
         // Enable anti-aliasing for smoother rendering
         scene.getEngine().setHardwareScalingLevel(1 / window.devicePixelRatio);
         
+        // ==================== PBR ENVIRONMENT SETUP ====================
+        // Create default PBR environment with Image-Based Lighting (IBL)
+        const hdrTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(
+            "https://playground.babylonjs.com/textures/environment.env", 
+            scene
+        );
+        scene.environmentTexture = hdrTexture;
+        scene.environmentIntensity = 1.0;
+        
+        // Create skybox for reflections (optional)
+        const skybox = scene.createDefaultSkybox(hdrTexture, true, 1000, 0.3);
+        
+        // ==================== PBR MATERIAL RECIPES ====================
+        const PBR_RECIPES = {
+            // Walls - Plaster/Drywall (matte finish)
+            'wall': {
+                baseColor: new BABYLON.Color3(0.92, 0.92, 0.88),
+                metallic: 0.0,
+                roughness: 0.95,
+                textureNames: {
+                    albedo: 'plaster_albedo.jpg',
+                    normal: 'plaster_normal.jpg',
+                    roughness: 'plaster_roughness.jpg'
+                }
+            },
+            
+            // Floors - Dark Wood
+            'floor': {
+                baseColor: new BABYLON.Color3(0.25, 0.18, 0.12),
+                metallic: 0.0,
+                roughness: 0.7,
+                textureNames: {
+                    albedo: 'wood_dark_albedo.jpg',
+                    normal: 'wood_dark_normal.jpg',
+                    roughness: 'wood_dark_roughness.jpg'
+                }
+            },
+            
+            // Ceilings - White painted surface
+            'ceiling': {
+                baseColor: new BABYLON.Color3(0.96, 0.96, 0.96),
+                metallic: 0.0,
+                roughness: 0.9,
+                textureNames: {
+                    albedo: 'paint_white_albedo.jpg',
+                    normal: 'paint_white_normal.jpg'
+                }
+            },
+            
+            // Doors - Painted wood (satin finish)
+            'door': {
+                baseColor: new BABYLON.Color3(0.85, 0.82, 0.75),
+                metallic: 0.0,
+                roughness: 0.4,
+                textureNames: {
+                    albedo: 'door_painted_albedo.jpg',
+                    normal: 'door_painted_normal.jpg',
+                    roughness: 'door_painted_roughness.jpg'
+                }
+            },
+            
+            // Windows - Glass with slight tint
+            'window': {
+                baseColor: new BABYLON.Color3(0.7, 0.85, 0.9),
+                metallic: 0.9,
+                roughness: 0.05,
+                alpha: 0.4,
+                textureNames: {
+                    albedo: 'glass_albedo.jpg'
+                }
+            },
+            
+            // Sink - Polished Steel
+            'sink': {
+                baseColor: new BABYLON.Color3(0.75, 0.75, 0.75),
+                metallic: 1.0,
+                roughness: 0.2,
+                textureNames: {
+                    albedo: 'metal_steel_albedo.jpg',
+                    normal: 'metal_steel_normal.jpg',
+                    metallic: 'metal_steel_metallic.jpg',
+                    roughness: 'metal_steel_roughness.jpg'
+                }
+            },
+            
+            // Table - Matte Wood Finish
+            'table': {
+                baseColor: new BABYLON.Color3(0.55, 0.4, 0.28),
+                metallic: 0.0,
+                roughness: 0.65,
+                textureNames: {
+                    albedo: 'wood_table_albedo.jpg',
+                    normal: 'wood_table_normal.jpg',
+                    roughness: 'wood_table_roughness.jpg'
+                }
+            },
+            
+            // Furniture - Generic wood
+            'furniture': {
+                baseColor: new BABYLON.Color3(0.5, 0.35, 0.25),
+                metallic: 0.0,
+                roughness: 0.6,
+                textureNames: {
+                    albedo: 'wood_furniture_albedo.jpg',
+                    normal: 'wood_furniture_normal.jpg'
+                }
+            },
+            
+            // Roof - Dark tiles
+            'roof': {
+                baseColor: new BABYLON.Color3(0.2, 0.2, 0.22),
+                metallic: 0.0,
+                roughness: 0.8,
+                textureNames: {
+                    albedo: 'roof_tile_albedo.jpg',
+                    normal: 'roof_tile_normal.jpg',
+                    roughness: 'roof_tile_roughness.jpg'
+                }
+            },
+            
+            // Default - Generic surface
+            'default': {
+                baseColor: new BABYLON.Color3(0.7, 0.7, 0.7),
+                metallic: 0.0,
+                roughness: 0.75,
+                textureNames: {}
+            }
+        };
+        
+        // ==================== PBR MATERIAL APPLICATION ====================
+        function applyPBRMaterials(scene) {
+            console.log('Applying PBR materials to scene...');
+            let materialsApplied = 0;
+            
+            scene.meshes.forEach(mesh => {
+                if (!mesh || mesh.name === '__root__' || mesh.name.toLowerCase().includes('snapshot')) {
+                    return;
+                }
+                
+                // Determine material type based on mesh name
+                const meshName = mesh.name.toLowerCase();
+                let recipeKey = 'default';
+                
+                // Match mesh name to PBR recipe
+                if (meshName.includes('wall') || meshName.includes('vegg') || meshName.includes('ifcwall')) {
+                    recipeKey = 'wall';
+                } else if (meshName.includes('floor') || meshName.includes('gulv') || meshName.includes('slab')) {
+                    recipeKey = 'floor';
+                } else if (meshName.includes('ceiling') || meshName.includes('tak')) {
+                    recipeKey = 'ceiling';
+                } else if (meshName.includes('door') || meshName.includes('dør')) {
+                    recipeKey = 'door';
+                } else if (meshName.includes('window') || meshName.includes('vindu')) {
+                    recipeKey = 'window';
+                } else if (meshName.includes('sink') || meshName.includes('vask')) {
+                    recipeKey = 'sink';
+                } else if (meshName.includes('table') || meshName.includes('bord')) {
+                    recipeKey = 'table';
+                } else if (meshName.includes('furniture') || meshName.includes('møbel') || meshName.includes('furnishing')) {
+                    recipeKey = 'furniture';
+                } else if (meshName.includes('roof') || meshName.includes('tak')) {
+                    recipeKey = 'roof';
+                }
+                
+                const recipe = PBR_RECIPES[recipeKey];
+                
+                // Create PBR material
+                const pbrMaterial = new BABYLON.PBRMetallicRoughnessMaterial(
+                    `pbr_${mesh.name}`, 
+                    scene
+                );
+                
+                // Apply base properties
+                pbrMaterial.baseColor = recipe.baseColor;
+                pbrMaterial.metallic = recipe.metallic;
+                pbrMaterial.roughness = recipe.roughness;
+                
+                // Handle transparency for glass
+                if (recipe.alpha !== undefined) {
+                    pbrMaterial.alpha = recipe.alpha;
+                    pbrMaterial.transparencyMode = BABYLON.PBRMaterial.PBRMATERIAL_ALPHABLEND;
+                }
+                
+                // Enable environment reflections
+                pbrMaterial.useRadianceOverAlpha = true;
+                pbrMaterial.useSpecularOverAlpha = true;
+                
+                // Backface culling for proper 3D rendering
+                pbrMaterial.backFaceCulling = true;
+                pbrMaterial.twoSidedLighting = false;
+                
+                // Store original alpha for X-ray mode
+                pbrMaterial.originalAlpha = pbrMaterial.alpha || 1.0;
+                
+                // TODO: Load textures if available
+                // Example for future texture loading:
+                // if (recipe.textureNames.albedo) {
+                //     pbrMaterial.baseTexture = new BABYLON.Texture(
+                //         `/static/textures/${recipe.textureNames.albedo}`, 
+                //         scene
+                //     );
+                // }
+                
+                // Apply material to mesh
+                mesh.material = pbrMaterial;
+                materialsApplied++;
+                
+                console.log(`Applied ${recipeKey} PBR material to: ${mesh.name}`);
+            });
+            
+            console.log(`✓ Applied ${materialsApplied} PBR materials`);
+            return materialsApplied;
+        }
+        
         // Camera
         const camera = new BABYLON.ArcRotateCamera('camera', -Math.PI / 2, Math.PI / 2.5, 20, BABYLON.Vector3.Zero(), scene);
         camera.attachControl(canvas, true);
@@ -463,17 +678,19 @@
         camera.lowerRadiusLimit = 0.5;
         camera.upperRadiusLimit = 500;
         
-        // Lights - improved for better 3D perception
+        // Lighting for PBR - softer with environment contribution
+        // Main ambient light (reduced since IBL provides base lighting)
         const light1 = new BABYLON.HemisphericLight('light1', new BABYLON.Vector3(0, 1, 0), scene);
-        light1.intensity = 0.6;
-        light1.groundColor = new BABYLON.Color3(0.2, 0.2, 0.3);
+        light1.intensity = 0.3; // Reduced from 0.6 for PBR
+        light1.groundColor = new BABYLON.Color3(0.1, 0.1, 0.15);
         
+        // Key directional light (sun simulation)
         const light2 = new BABYLON.DirectionalLight('light2', new BABYLON.Vector3(-1, -2, -1), scene);
-        light2.intensity = 0.8;
+        light2.intensity = 0.5; // Reduced from 0.8 for PBR
         
-        // Add a third light from the right for better depth perception
+        // Fill light from opposite side
         const light3 = new BABYLON.DirectionalLight('light3', new BABYLON.Vector3(1, 0.5, 1), scene);
-        light3.intensity = 0.4;
+        light3.intensity = 0.2; // Reduced from 0.4 for PBR
         
         // State
         let defectsData = [];
@@ -502,60 +719,10 @@
                 // Update mesh count
                 document.getElementById('meshCount').textContent = result.meshes.length;
                 
-                // Find Snapshot meshes and configure materials
+                // Find Snapshot meshes
                 result.meshes.forEach(mesh => {
                     if (mesh.name === '__root__') {
                         rootMesh = mesh;
-                    }
-                    
-                    // Apply realistic colors based on mesh names
-                    if (mesh.material && !mesh.name.toLowerCase().includes('snapshot')) {
-                        const meshName = mesh.name.toLowerCase();
-                        
-                        // Enable backface culling for proper 3D rendering
-                        mesh.material.backFaceCulling = true;
-                        mesh.material.twoSidedLighting = false;
-                        
-                        // Color assignment based on object type
-                        if (meshName.includes('door') || meshName.includes('dør')) {
-                            // Doors - Blue
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.2, 0.4, 0.8);
-                            mesh.material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
-                        } else if (meshName.includes('window') || meshName.includes('vindu')) {
-                            // Windows - Light cyan/glass
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.6, 0.8, 0.9);
-                            mesh.material.alpha = 0.6;
-                            mesh.material.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8);
-                        } else if (meshName.includes('wall') || meshName.includes('vegg')) {
-                            // Walls - Light beige/white
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.85);
-                            mesh.material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-                        } else if (meshName.includes('floor') || meshName.includes('gulv')) {
-                            // Floor - Wood brown
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.6, 0.5, 0.4);
-                            mesh.material.specularColor = new BABYLON.Color3(0.3, 0.3, 0.2);
-                        } else if (meshName.includes('ceiling') || meshName.includes('tak')) {
-                            // Ceiling - White
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.95, 0.95, 0.95);
-                            mesh.material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-                        } else if (meshName.includes('roof') || meshName.includes('tak')) {
-                            // Roof - Dark gray
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.3, 0.3, 0.35);
-                            mesh.material.specularColor = new BABYLON.Color3(0.4, 0.4, 0.4);
-                        } else if (meshName.includes('furniture') || meshName.includes('møbel')) {
-                            // Furniture - Brown
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.5, 0.35, 0.25);
-                            mesh.material.specularColor = new BABYLON.Color3(0.3, 0.2, 0.1);
-                        } else {
-                            // Default - Light gray with slight color
-                            mesh.material.diffuseColor = new BABYLON.Color3(0.75, 0.75, 0.8);
-                            mesh.material.specularColor = new BABYLON.Color3(0.2, 0.2, 0.2);
-                        }
-                        
-                        // Store original alpha for X-ray mode
-                        if (!mesh.material.originalAlpha) {
-                            mesh.material.originalAlpha = mesh.material.alpha || 1.0;
-                        }
                     }
                     
                     if (mesh.name && mesh.name.toLowerCase().includes('snapshot')) {
@@ -569,6 +736,9 @@
                         console.log('Found Snapshot mesh:', mesh.name, 'at', mesh.absolutePosition.x.toFixed(2), mesh.absolutePosition.y.toFixed(2), mesh.absolutePosition.z.toFixed(2));
                     }
                 });
+                
+                // Apply PBR materials to all meshes
+                applyPBRMaterials(scene);
                 
                 console.log('Total Snapshot meshes found:', snapshotMeshes.length);
                 

@@ -47,6 +47,8 @@
 │   ├── migrate_db.py            # Database migration script
 │   └── update_defect_elements.py # Batch update script
 │
+├── PBR_IMPLEMENTATION.md        # PBR materials technical documentation
+├── PBR_QUICKSTART.md            # Quick reference for PBR setup
 ├── docker-compose.yml           # Docker composition
 ├── Dockerfile                   # Docker image definition
 ├── requirements.txt             # Python dependencies
@@ -118,7 +120,28 @@
 - **pygltflib** - Parse GLB 3D models
 - **PyPDF2** - Extract images from PDFs
 - **Pillow** - Image processing
-- **Babylon.js** (CDN) - 3D rendering in browser
+- **Babylon.js 8.40.1** (CDN) - 3D rendering with PBR materials
+
+---
+
+## 🎨 3D Rendering Features
+
+### PBR Materials System
+Physically Based Rendering (PBR) materials for photorealistic visualization:
+- **HDRI Environment Lighting**: Image-Based Lighting (IBL) for realistic reflections
+- **10 Material Recipes**: Optimized for walls, floors, glass, metal, wood
+- **Auto-Assignment**: Detects IFC element types and applies appropriate materials
+- **X-Ray Mode Compatible**: Preserves transparency functionality
+
+**Documentation**:
+- Technical details: `PBR_IMPLEMENTATION.md`
+- Quick start guide: `PBR_QUICKSTART.md`
+
+**Material Examples**:
+- Walls (plaster): Matte finish, roughness 0.95
+- Windows (glass): 40% transparent, high reflectivity, metallic 0.9
+- Sinks (steel): Polished metal, metallic 1.0, roughness 0.2
+- Floors (wood): Semi-matte, roughness 0.7
 
 ---
 
