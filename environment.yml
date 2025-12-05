@@ -19,6 +19,6 @@ dependencies:
     - pytest
     - black
     - pypdf>=4.1.0
-    - pygltflib>=1.16.6
+    - pygltflib==1.16.5  # latest version available on linux-aarch64
     - pillow>=10.0.0
     # add other pip deps here
