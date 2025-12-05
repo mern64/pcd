@@ -29,7 +29,7 @@ services:
     ports:
       - "5432:5432"  # Expose the PostgreSQL port
     volumes:
-      - flask_db_data:/var/lib/postgresql/data  # Store data persistently
+      - flask_db_data:/var/lib/postgresql  # Use version-specific subdirs
 
 volumes:
   flask_db_data:  # This is for persistent storage of your database data
