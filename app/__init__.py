@@ -8,6 +8,7 @@ from .extensions import db
 from .upload_data.routes import upload_data_bp
 from .process_data.routes import process_data_bp
 from .defects.routes import defects_bp
+from .developer.routes import developer_bp
 
 
 def create_app():
@@ -23,6 +24,7 @@ def create_app():
     app.register_blueprint(upload_data_bp)
     app.register_blueprint(process_data_bp)
     app.register_blueprint(defects_bp)
+    app.register_blueprint(developer_bp)
 
     @app.route("/")
     def index():

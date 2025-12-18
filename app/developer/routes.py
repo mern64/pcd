@@ -1,0 +1,363 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from app.extensions import db
+from app.models import Scan, Defect
+
+developer_bp = Blueprint("developer", __name__)
+
+
+@developer_bp.route("/developer", methods=["GET"])
+def dashboard():
+    """Developer dashboard - view all projects and their defects"""
+    sort = request.args.get("sort", "recent")
+    status_filter = request.args.get("status_filter", "all")
+    date_range = request.args.get("date_range", "all")
+    order_clause = Scan.created_at.desc() if sort == "recent" else Scan.created_at.asc()
+
+    # Get all scans with defect counts
+    query = db.session.query(
+        Scan,
+        db.func.count(Defect.id).label('defect_count'),
+        db.func.coalesce(db.func.sum(db.case((Defect.status == 'Reported', 1), else_=0)), 0).label('reported_count'),
+        db.func.coalesce(db.func.sum(db.case((Defect.status == 'Under Review', 1), else_=0)), 0).label('review_count'),
+        db.func.coalesce(db.func.sum(db.case((Defect.status == 'Fixed', 1), else_=0)), 0).label('fixed_count')
+    ).outerjoin(Defect).group_by(Scan.id).order_by(order_clause)
+    
+    # Apply date range filter
+    from datetime import datetime, timedelta
+    if date_range == "week":
+        cutoff = datetime.now() - timedelta(days=7)
+        query = query.filter(Scan.created_at >= cutoff)
+    elif date_range == "month":
+        cutoff = datetime.now() - timedelta(days=30)
+        query = query.filter(Scan.created_at >= cutoff)
+    elif date_range == "3months":
+        cutoff = datetime.now() - timedelta(days=90)
+        query = query.filter(Scan.created_at >= cutoff)
+    
+    scans = query.all()
+    
+    # Apply status filter in Python (simpler than SQL HAVING clause)
+    if status_filter != "all":
+        filtered_scans = []
+        for scan_data in scans:
+            scan, defect_count, reported, review, fixed = scan_data
+            if status_filter == "complete" and defect_count > 0 and fixed == defect_count:
+                filtered_scans.append(scan_data)
+            elif status_filter == "in_progress" and review > 0:
+                filtered_scans.append(scan_data)
+            elif status_filter == "started" and reported > 0 and review == 0 and fixed == 0:
+                filtered_scans.append(scan_data)
+        scans = filtered_scans
+
+    total_defects = sum(row.defect_count for row in scans)
+    total_reported = sum(row.reported_count for row in scans)
+    total_review = sum(row.review_count for row in scans)
+    total_fixed = sum(row.fixed_count for row in scans)
+
+    return render_template(
+        "developer/dashboard.html",
+        scans=scans,
+        total_defects=total_defects,
+        total_reported=total_reported,
+        total_review=total_review,
+        total_fixed=total_fixed,
+        sort=sort,
+        status_filter=status_filter,
+        date_range=date_range,
+    )
+
+
+@developer_bp.route("/developer/scan/<int:scan_id>", methods=["GET"])
+def view_scan(scan_id):
+    """View detailed defects for a specific scan"""
+    scan = Scan.query.get_or_404(scan_id)
+    defects = Defect.query.filter_by(scan_id=scan_id).order_by(Defect.created_at.desc()).all()
+
+    return render_template("developer/scan_detail.html", scan=scan, defects=defects)
+
+
+@developer_bp.route("/developer/defect/<int:defect_id>/update", methods=["POST"])
+def update_defect_progress(defect_id):
+    """Update defect status/progress"""
+    from app.models import ActivityLog
+    
+    defect = Defect.query.get_or_404(defect_id)
+    scan_id = defect.scan_id
+    
+    new_status = request.form.get("status")
+    new_priority = request.form.get("priority")
+    new_notes = request.form.get("notes", "").strip()
+
+    if new_status and new_status not in ['Reported', 'Under Review', 'Fixed']:
+        return jsonify({"success": False, "message": "Invalid status"}), 400
+    
+    if new_priority and new_priority not in ['Urgent', 'High', 'Medium', 'Low']:
+        return jsonify({"success": False, "message": "Invalid priority"}), 400
+
+    # Log changes
+    if new_status and new_status != defect.status:
+        activity = ActivityLog(
+            defect_id=defect_id,
+            scan_id=scan_id,
+            action='status updated',
+            old_value=defect.status,
+            new_value=new_status
+        )
+        db.session.add(activity)
+    
+    if new_priority and new_priority != defect.priority:
+        activity = ActivityLog(
+            defect_id=defect_id,
+            scan_id=scan_id,
+            action='priority updated',
+            old_value=defect.priority or 'Medium',
+            new_value=new_priority
+        )
+        db.session.add(activity)
+    
+    # Update defect
+    if new_status:
+        defect.status = new_status
+    if new_priority:
+        defect.priority = new_priority
+    if new_notes:
+        defect.notes = new_notes
+
+    db.session.commit()
+
+    # Return JSON for AJAX or redirect for regular form submission
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({"success": True, "message": f"Defect #{defect.id} updated successfully"})
+    
+    flash(f"✓ Defect #{defect.id} updated successfully", "success")
+    return redirect(request.referrer or url_for('developer.dashboard'))
+
+
+@developer_bp.route("/developer/image/<path:image_path>", methods=["GET"])
+def serve_defect_image(image_path: str):
+    """Serve defect images from the uploads directory"""
+    from flask import send_from_directory, current_app, abort
+    import os
+
+    current_app.logger.info(f"Serving defect image: {image_path}")
+
+    # Security check - ensure the path doesn't contain dangerous elements
+    if ".." in image_path or image_path.startswith("/"):
+        current_app.logger.warning(f"Security violation in image path: {image_path}")
+        abort(404)
+
+    # Construct the full path to the uploads directory
+    upload_root = os.path.join(current_app.instance_path, "uploads", "upload_data")
+    full_image_path = os.path.join(upload_root, image_path)
+
+    current_app.logger.debug(f"Full image path: {full_image_path}")
+
+    # Security check - ensure the resolved path is within the upload directory
+    upload_root_abs = os.path.abspath(upload_root)
+    full_image_path_abs = os.path.abspath(full_image_path)
+
+    if not full_image_path_abs.startswith(upload_root_abs):
+        current_app.logger.warning(f"Path traversal attempt: {full_image_path_abs} not in {upload_root_abs}")
+        abort(404)
+
+    if not os.path.exists(full_image_path_abs):
+        current_app.logger.warning(f"Image not found: {full_image_path_abs}")
+        abort(404)
+
+    # Get directory and filename
+    image_dir = os.path.dirname(full_image_path_abs)
+    filename = os.path.basename(full_image_path_abs)
+
+    current_app.logger.info(f"Serving {filename} from {image_dir}")
+    return send_from_directory(image_dir, filename)
+
+
+@developer_bp.route("/developer/scan/<int:scan_id>/bulk-update", methods=["POST"])
+def bulk_update_defects(scan_id):
+    """Bulk update multiple defects at once"""
+    from app.models import ActivityLog
+    
+    scan = Scan.query.get_or_404(scan_id)
+    
+    defect_ids = request.form.getlist("defect_ids[]")
+    new_status = request.form.get("bulk_status")
+    new_priority = request.form.get("bulk_priority")
+    
+    if not defect_ids:
+        flash("⚠ No defects selected", "error")
+        return redirect(url_for('developer.view_scan', scan_id=scan_id))
+    
+    if new_status and new_status not in ['Reported', 'Under Review', 'Fixed']:
+        flash("⚠ Invalid status", "error")
+        return redirect(url_for('developer.view_scan', scan_id=scan_id))
+    
+    if new_priority and new_priority not in ['Urgent', 'High', 'Medium', 'Low']:
+        flash("⚠ Invalid priority", "error")
+        return redirect(url_for('developer.view_scan', scan_id=scan_id))
+    
+    # Update all selected defects
+    updated_count = 0
+    for defect_id in defect_ids:
+        defect = Defect.query.filter_by(id=int(defect_id), scan_id=scan_id).first()
+        if defect:
+            # Log status change
+            if new_status and new_status != defect.status:
+                activity = ActivityLog(
+                    defect_id=defect.id,
+                    scan_id=scan_id,
+                    action='status updated (bulk)',
+                    old_value=defect.status,
+                    new_value=new_status
+                )
+                db.session.add(activity)
+            
+            # Log priority change
+            if new_priority and new_priority != defect.priority:
+                activity = ActivityLog(
+                    defect_id=defect.id,
+                    scan_id=scan_id,
+                    action='priority updated (bulk)',
+                    old_value=defect.priority or 'Medium',
+                    new_value=new_priority
+                )
+                db.session.add(activity)
+            
+            if new_status:
+                defect.status = new_status
+            if new_priority:
+                defect.priority = new_priority
+            updated_count += 1
+    
+    db.session.commit()
+    flash(f"✓ Successfully updated {updated_count} defect(s)", "success")
+    return redirect(url_for('developer.view_scan', scan_id=scan_id))
+
+
+@developer_bp.route("/developer/scan/<int:scan_id>/export-csv", methods=["GET"])
+def export_scan_csv(scan_id):
+    """Export scan defects to CSV"""
+    from flask import Response
+    import csv
+    from io import StringIO
+    
+    scan = Scan.query.get_or_404(scan_id)
+    defects = Defect.query.filter_by(scan_id=scan_id).order_by(Defect.created_at.desc()).all()
+    
+    # Create CSV
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['ID', 'Element', 'Location', 'Type', 'Severity', 'Priority', 'Status', 'Description', 'Notes', 'Created'])
+    
+    # Data rows
+    for d in defects:
+        writer.writerow([
+            d.id,
+            d.element or '',
+            d.location or '',
+            d.defect_type or '',
+            d.severity or '',
+            d.priority or 'Medium',
+            d.status or '',
+            d.description or '',
+            d.notes or '',
+            d.created_at.strftime('%Y-%m-%d %H:%M') if d.created_at else ''
+        ])
+    
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={scan.name}_defects.csv'}
+    )
+
+
+# ===== PHASE 3: Analytics, Charts, Assignments, Activity =====
+
+# (Team assignment removed)
+
+
+@developer_bp.route("/developer/scan/<int:scan_id>/charts-data", methods=["GET"])
+def get_charts_data(scan_id):
+    """Get data for charts (status, priority, trend)"""
+    from datetime import datetime, timedelta
+    
+    scan = Scan.query.get_or_404(scan_id)
+    defects = Defect.query.filter_by(scan_id=scan_id).all()
+    
+    # Status distribution
+    status_counts = {}
+    for d in defects:
+        status_counts[d.status] = status_counts.get(d.status, 0) + 1
+    
+    # Priority distribution
+    priority_counts = {}
+    for d in defects:
+        priority = d.priority or 'Medium'
+        priority_counts[priority] = priority_counts.get(priority, 0) + 1
+    
+    # Defect trend (by day for last 30 days)
+    today = datetime.utcnow().date()
+    trend_data = {}
+    for i in range(30):
+        date = today - timedelta(days=i)
+        count = len([d for d in defects if d.created_at and d.created_at.date() == date])
+        trend_data[str(date)] = count
+    
+    # Sort trend data by date
+    sorted_trend = dict(sorted(trend_data.items()))
+    
+    return jsonify({
+        'status': status_counts,
+        'priority': priority_counts,
+        'trend': sorted_trend,
+        'total': len(defects)
+    })
+
+
+@developer_bp.route("/developer/scan/<int:scan_id>/heatmap-data", methods=["GET"])
+def get_heatmap_data(scan_id):
+    """Get heatmap data by location"""
+    scan = Scan.query.get_or_404(scan_id)
+    defects = Defect.query.filter_by(scan_id=scan_id).all()
+    
+    # Count defects by location
+    location_counts = {}
+    for d in defects:
+        location = d.location or 'Unknown'
+        location_counts[location] = location_counts.get(location, 0) + 1
+    
+    # Priority weight (for intensity)
+    priority_weight = {'Urgent': 4, 'High': 3, 'Medium': 2, 'Low': 1}
+    location_priority = {}
+    for d in defects:
+        location = d.location or 'Unknown'
+        priority = d.priority or 'Medium'
+        weight = priority_weight.get(priority, 2)
+        location_priority[location] = location_priority.get(location, 0) + weight
+    
+    return jsonify({
+        'locations': list(location_counts.keys()),
+        'counts': list(location_counts.values()),
+        'priority_weights': list(location_priority.values())
+    })
+
+
+@developer_bp.route("/developer/recent-activity", methods=["GET"])
+def get_recent_activity():
+    """Get recent activity across all scans"""
+    from app.models import ActivityLog
+    
+    # Get last 20 activities
+    activities = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(20).all()
+    
+    return jsonify([{
+        'id': a.id,
+        'action': a.action,
+        'old_value': a.old_value,
+        'new_value': a.new_value,
+        'defect_id': a.defect_id,
+        'scan_id': a.scan_id,
+        'timestamp': a.timestamp.strftime('%Y-%m-%d %H:%M:%S') if a.timestamp else ''
+    } for a in activities])

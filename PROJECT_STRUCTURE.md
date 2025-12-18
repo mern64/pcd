@@ -14,6 +14,10 @@
 │   │   ├── __init__.py
 │   │   └── routes.py            # Routes: /projects, /scans/<id>/visualize
 │   │
+│   ├── developer/               # Developer/admin dashboard
+│   │   ├── __init__.py
+│   │   └── routes.py            # Routes: /developer, /developer/scan/<id>
+│   │
 │   ├── upload_data/             # File upload module
 │   │   ├── __init__.py
 │   │   ├── routes.py            # Route: /upload-data
@@ -28,6 +32,10 @@
 │       ├── defects/
 │       │   ├── projects.html    # Projects listing page
 │       │   └── visualization.html # 3D visualization viewer
+│       │
+│       ├── developer/           # Developer dashboard templates
+│       │   ├── dashboard.html   # Developer project overview
+│       │   └── scan_detail.html # Individual scan defect management
 │       ├── upload_data/
 │       │   └── upload.html      # Upload form
 │       └── process_data/
@@ -145,7 +153,27 @@ Physically Based Rendering (PBR) materials for photorealistic visualization:
 
 ---
 
-## 🛠️ Utility Scripts
+## �‍💻 Developer Dashboard
+
+The developer module provides administrative access to monitor and manage all projects:
+
+### Routes
+- `/developer` - Dashboard overview of all projects and defect statistics
+- `/developer/scan/<id>` - Detailed view of defects for a specific scan
+- `/developer/defect/<id>/update` - Update defect status and progress notes
+
+### Features
+- **Project Overview**: View all scans with defect counts and status breakdowns
+- **Defect Management**: Update defect status (Reported → Under Review → Fixed)
+- **Progress Tracking**: Add notes and track repair progress
+- **Statistics**: System-wide defect statistics and trends
+
+### Access Control
+Currently open access - consider adding authentication for production use.
+
+---
+
+## �🛠️ Utility Scripts
 
 Located in `utils/` folder:
 

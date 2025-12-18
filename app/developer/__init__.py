@@ -1,0 +1,1 @@
+# Developer blueprint for admin/developer access
