@@ -71,6 +71,9 @@
     {% if error %}
       <div class="error">{{ error }}</div>
     {% else %}
+      {% if auto_assigned %}
+        <div class="flash info">Images were automatically matched to defects based on filename/extensible heuristics.</div>
+      {% endif %}
       
       <!-- Upload Details Section -->
       {% if upload_metadata %}

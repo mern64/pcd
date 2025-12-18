@@ -1,8 +1,9 @@
 import glob
 import json
 import os
+import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from flask import (
     Blueprint,
@@ -235,6 +236,81 @@ def _resolve_image(metadata: dict, image_id: str) -> Optional[Tuple[str, str]]:
     return None
 
 
+def _tokenize_text(value: Optional[str]) -> Set[str]:
+    if not value:
+        return set()
+    return set(re.findall(r"[a-z0-9]+", value.lower()))
+
+
+def _auto_assign_images(metadata: dict, defects: List[DefectRecord]) -> bool:
+    if not metadata or not defects:
+        return False
+
+    assignments = metadata.setdefault("assignments", {}).setdefault("defect_to_image", {})
+    if assignments:
+        return False
+
+    images = metadata.get("images", [])
+    if not images:
+        return False
+
+    assigned = False
+    used_images: Set[str] = set()
+
+    def _assign(defect_id: str, image_id: str) -> None:
+        nonlocal assigned
+        assignments[defect_id] = image_id
+        used_images.add(image_id)
+        assigned = True
+
+    defect_tokens: Dict[str, Set[str]] = {}
+    for defect in defects:
+        key = str(defect.id)
+        defect_tokens[key] = (
+            _tokenize_text(defect.id)
+            | _tokenize_text(defect.description)
+            | _tokenize_text(defect.element)
+        )
+
+    for image in images:
+        image_id = str(image.get("id", ""))
+        if not image_id or image_id in used_images:
+            continue
+        filename = (image.get("file") or "").lower()
+        for defect in defects:
+            defect_id = str(defect.id)
+            if not defect_id or defect_id in assignments:
+                continue
+            if defect_id.lower() in filename:
+                _assign(defect_id, image_id)
+                break
+
+    for image in images:
+        image_id = str(image.get("id", ""))
+        if not image_id or image_id in used_images:
+            continue
+        image_tokens = _tokenize_text(image.get("file"))
+        if not image_tokens:
+            continue
+        for defect in defects:
+            defect_id = str(defect.id)
+            if not defect_id or defect_id in assignments:
+                continue
+            if defect_tokens.get(defect_id) and image_tokens & defect_tokens[defect_id]:
+                _assign(defect_id, image_id)
+                break
+
+    remaining_images = [img for img in images if str(img.get("id", "")) not in used_images]
+    remaining_defects = [defect for defect in defects if str(defect.id) not in assignments]
+    for image, defect in zip(remaining_images, remaining_defects):
+        image_id = str(image.get("id", ""))
+        defect_id = str(defect.id)
+        if image_id and defect_id:
+            _assign(defect_id, image_id)
+
+    return assigned
+
+
 def _render_error(message: str):
     return render_template(
         "process_data/process_result.html",
@@ -300,6 +376,11 @@ def process_defect_file():
     # GET logic
     defects, source_path, source_kind = _load_defects()
     metadata = _load_latest_metadata()
+    auto_assigned = False
+    if metadata and defects:
+        auto_assigned = _auto_assign_images(metadata, defects)
+        if auto_assigned:
+            _save_latest_metadata(metadata)
     image_entries = _image_entries(metadata)
     defect_assignments = _defect_assignments_map(metadata)
 
@@ -340,6 +421,7 @@ def process_defect_file():
         defect_assignments=defect_assignments,
         upload_metadata=metadata,
         default_scan_name=default_scan_name,
+        auto_assigned=auto_assigned,
     )
 
 
