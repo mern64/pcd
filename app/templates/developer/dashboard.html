@@ -6,242 +6,405 @@
     <title>Developer Dashboard - LIDAR Defect Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: system-ui, sans-serif; margin:0; padding:2rem; background:#f3f4f6; }
-        .card { max-width:1100px; margin:0 auto; padding:2rem; background:#fff; border-radius:12px; box-shadow:0 10px 25px rgba(15,23,42,0.1); }
-        h1 { margin-top:0; font-size:1.8rem; color:#1e293b; display: flex; align-items: center; gap: 12px; }
-        h1 i { color: #3b82f6; }
-        .subtitle { color:#64748b; font-size:0.95rem; margin-top:-0.5rem; margin-bottom:1.5rem; }
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-        /* Action bar */
-        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
-        .search-box { flex: 1; max-width: 400px; position: relative; }
-        .search-box input { width: 100%; padding: 0.6rem 0.9rem 0.6rem 2.5rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; }
-        .search-box i { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: #9ca3af; }
-
-        .sort-box { display: flex; align-items: center; gap: 0.5rem; }
-        .sort-select { padding: 0.55rem 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; background: #fff; }
-
-        /* Breadcrumbs */
-        .breadcrumbs { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; font-size: 0.9rem; color: #64748b; }
-        .breadcrumbs a { color: #3b82f6; text-decoration: none; }
-        .breadcrumbs a:hover { text-decoration: underline; }
-        .breadcrumbs i { font-size: 0.75rem; }
-
-        /* Progress bar */
-        .progress-container { margin-top: 0.75rem; }
-        .progress-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; margin-bottom: 0.25rem; }
-        .progress-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb); border-radius: 4px; transition: width 0.3s; }
-        .progress-fill.complete { background: linear-gradient(90deg, #10b981, #059669); }
-
-        .btn { padding: 0.6rem 1.2rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
-
-        /* Stats grid */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
-        .stat-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.5rem; text-align: center; }
-        .stat-card h3 { margin: 0 0 1rem 0; color: #374151; font-size: 1rem; }
-        .stat-number { font-size: 2.5rem; font-weight: bold; color: #1e40af; margin-bottom: 0.5rem; }
-        .stat-card p { margin: 0; color: #64748b; }
-
-        /* Projects grid - matching projects.html style */
-        .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem; }
-        .project-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.25rem; cursor: pointer; transition: all 0.2s; text-decoration: none; color: inherit; display: block; }
-        .project-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15); transform: translateY(-2px); }
-
-        .project-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
-        .project-title { font-size: 1.1rem; font-weight: 600; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 8px; }
-        .project-title i { color: #3b82f6; font-size: 1rem; }
-        .project-id { font-size: 0.8rem; color: #9ca3af; background: #f3f4f6; padding: 0.25rem 0.6rem; border-radius: 6px; }
-
-        .project-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-        .meta-item { display: flex; flex-direction: column; gap: 0.25rem; }
-        .meta-label { font-size: 0.75rem; text-transform: uppercase; color: #9ca3af; font-weight: 600; letter-spacing: 0.5px; }
-        .meta-value { font-size: 0.9rem; color: #1e293b; font-weight: 500; }
-
-        .project-stats { display: flex; gap: 1rem; padding-top: 0.75rem; border-top: 1px solid #e5e7eb; }
-        .stat { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #64748b; }
-        .stat i { color: #3b82f6; }
-        .stat-value { font-weight: 600; color: #1e293b; }
-
-        .status-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.5rem; }
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-        .status-reported { background: #fef3c7; color: #92400e; }
-        .status-review { background: #dbeafe; color: #1e40af; }
-        .status-fixed { background: #d1fae5; color: #065f46; }
-
-        .project-actions { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; text-align: center; }
-        .project-actions .btn { justify-content: center; display: inline-flex !important; width: auto !important; max-width: 160px; padding: 0.5rem 0.75rem; margin: 0 auto; min-width: 0; font-size: 0.9rem; line-height: 1.3; white-space: normal; text-align: center; }
-
-        /* Empty state */
-        .empty-state { text-align: center; padding: 4rem 2rem; color: #9ca3af; }
-        .empty-state i { font-size: 4rem; color: #d1d5db; margin-bottom: 1rem; }
-        .empty-state h3 { font-size: 1.2rem; color: #64748b; margin-bottom: 0.5rem; }
-
-        @media (max-width: 768px) {
-            .stats-grid { grid-template-columns: 1fr; }
-            .projects-grid { grid-template-columns: 1fr; }
-            .action-bar { flex-direction: column; gap: 1rem; align-items: stretch; }
+        :root {
+            --bg: #0b1020;
+            --panel: rgba(255, 255, 255, 0.05);
+            --ink: #e2e8f0;
+            --muted: #94a3b8;
+            --edge: rgba(255, 255, 255, 0.08);
+            --accent: #7c3aed;
+            --accent-2: #22d3ee;
+            --success: #10b981;
+            --warning: #f59e0b;
         }
+
+        body.light-mode {
+            --bg: #f5f5f5;
+            --panel: rgba(0, 0, 0, 0.03);
+            --ink: #0f172a;
+            --muted: #475569;
+            --edge: rgba(0, 0, 0, 0.08);
+            --accent: #7c3aed;
+            --accent-2: #0ea5e9;
+            --success: #059669;
+            --warning: #d97706;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: 'Space Grotesk', 'Manrope', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.15), transparent 35%),
+                        radial-gradient(circle at 80% 0%, rgba(34, 211, 238, 0.12), transparent 30%),
+                        linear-gradient(135deg, #0b1020 0%, #0f172a 45%, #0a101d 100%);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+
+        body.light-mode {
+            background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.08), transparent 35%),
+                        radial-gradient(circle at 80% 0%, rgba(14, 165, 233, 0.08), transparent 30%),
+                        linear-gradient(135deg, #f8fafc 0%, #e2e8f0 45%, #f5f5f5 100%);
+        }
+
+        .bento-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.2rem;
+            align-items: start;
+        }
+
+        .bento-card {
+            position: relative;
+            padding: 1.5rem;
+            border-radius: 18px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+            border: 1px solid var(--edge);
+            box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+            overflow: hidden;
+        }
+
+        body.light-mode .bento-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82));
+            box-shadow: 0 18px 40px rgba(15,23,42,0.12);
+        }
+
+        .bento-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(120% 120% at 100% 0%, rgba(124,58,237,0.14), transparent 55%);
+        }
+
+        body.light-mode .bento-card::after {
+            background: radial-gradient(120% 120% at 100% 0%, rgba(124,58,237,0.08), transparent 55%);
+        }
+
+        .bento-card h1, .bento-card h2, .bento-card h3 { margin: 0; color: var(--ink); }
+        .subtitle { color: var(--muted); margin: 0.35rem 0 1.2rem; font-size: 0.98rem; max-width: 780px; }
+
+        .hero { display: grid; gap: 1rem; }
+        .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 0.35rem 0.75rem; border-radius: 999px; background: rgba(124,58,237,0.14); color: var(--ink); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; }
+
+        .theme-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.45rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid var(--edge);
+            background: rgba(255,255,255,0.06);
+            color: var(--ink);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover { transform: translateY(-1px); border-color: rgba(124,58,237,0.45); box-shadow: 0 10px 18px rgba(0,0,0,0.25); }
+        body.light-mode .theme-toggle { background: rgba(255,255,255,0.85); box-shadow: 0 10px 18px rgba(15,23,42,0.08); }
+
+        h1 { font-size: 2.05rem; line-height: 1.2; display: flex; align-items: center; gap: 12px; }
+        h1 i { color: var(--accent-2); }
+
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 0.85rem; align-items: flex-end; }
+        .action-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+        .search-box { position: relative; width: 100%; flex: 1 1 260px; }
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 0.9rem 0.75rem 2.75rem;
+            border-radius: 12px;
+            border: 1px solid var(--edge);
+            background: rgba(255,255,255,0.04);
+            color: var(--ink);
+            font-size: 0.95rem;
+        }
+        .search-box i { position: absolute; left: 0.95rem; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+        .sort-box { flex: 2 1 380px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.65rem; align-items: center; }
+        .sort-select, .sort-box label { width: 100%; }
+        .sort-select {
+            padding: 0.65rem 0.75rem;
+            border-radius: 10px;
+            border: 1px solid var(--edge);
+            background: rgba(255,255,255,0.04);
+            color: var(--ink);
+            font-weight: 600;
+        }
+        .sort-select option { color: #0f172a; }
+        .meta-label { font-size: 0.78rem; letter-spacing: 0.02em; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+
+        .hero-metrics { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .metric-chip { padding: 0.55rem 0.85rem; border-radius: 12px; background: rgba(34,211,238,0.12); color: var(--ink); font-weight: 600; font-size: 0.9rem; border: 1px solid rgba(34,211,238,0.25); }
+
+        .stats-card { display: grid; gap: 1rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+        .stat-card {
+            padding: 1.1rem 1rem;
+            border-radius: 14px;
+            background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border: 1px solid var(--edge);
+        }
+        .stat-card h3 { display: flex; align-items: center; gap: 8px; font-size: 0.98rem; color: var(--ink); margin: 0; }
+        .stat-card h3 i { color: var(--accent-2); }
+        .stat-number { font-size: 2.4rem; font-weight: 700; color: var(--ink); margin: 0.15rem 0 0.35rem; }
+        .stat-card p { margin: 0; color: var(--muted); }
+
+        .projects-header { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
+        .pill { padding: 0.35rem 0.65rem; border-radius: 10px; background: rgba(255,255,255,0.06); color: var(--muted); font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .projects-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+        .project-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+            border: 1px solid var(--edge);
+            border-radius: 14px;
+            padding: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        .project-card:hover { transform: translateY(-3px); border-color: rgba(124,58,237,0.4); box-shadow: 0 12px 25px rgba(0,0,0,0.35); }
+
+        .project-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.9rem; }
+        .project-title { font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 0; display: flex; align-items: center; gap: 8px; }
+        .project-title i { color: var(--accent); }
+        .project-id { font-size: 0.78rem; color: var(--ink); background: rgba(255,255,255,0.06); padding: 0.3rem 0.6rem; border-radius: 8px; border: 1px solid var(--edge); }
+
+        .project-meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.65rem; margin-bottom: 0.85rem; }
+        .meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        .meta-value { font-size: 0.95rem; color: var(--ink); font-weight: 600; }
+
+        .status-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.35rem; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; border: 1px solid var(--edge); }
+        .status-reported { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+        .status-review { background: rgba(59, 130, 246, 0.16); color: #bfdbfe; border-color: rgba(59,130,246,0.35); }
+        .status-fixed { background: rgba(16, 185, 129, 0.16); color: #bbf7d0; border-color: rgba(16,185,129,0.35); }
+
+        .progress-container { margin-top: 0.7rem; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); margin-bottom: 0.25rem; }
+        .progress-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #22d3ee, #7c3aed); border-radius: 6px; transition: width 0.3s; }
+        .progress-fill.complete { background: linear-gradient(90deg, #10b981, #0ea472); }
+
+        .project-actions { margin-top: 1rem; padding-top: 0.9rem; border-top: 1px dashed rgba(255,255,255,0.08); }
+        .btn { padding: 0.6rem 1.05rem; border-radius: 10px; border: 1px solid rgba(34,211,238,0.4); cursor: pointer; font-size: 0.95rem; font-weight: 700; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #22d3ee, #7c3aed); color: #0b1020; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(34,211,238,0.28); }
+
+        .empty-state { text-align: center; padding: 3.5rem 2rem; color: var(--muted); border: 1px dashed var(--edge); background: rgba(255,255,255,0.02); border-radius: 14px; }
+        .empty-state i { font-size: 3rem; color: var(--muted); opacity: 0.7; margin-bottom: 1rem; }
+        .empty-state h3 { font-size: 1.15rem; color: var(--ink); margin-bottom: 0.5rem; }
+
+        .activity-section h2 { color: var(--ink); }
+        .activity-title { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+        .activity-feed { max-height: 400px; overflow-y: auto; }
+
+        .span-2 { grid-column: span 2; }
+        @media (max-width: 900px) { .span-2 { grid-column: span 1; } }
     </style>
 </head>
 <body>
-    <main class="card">
-        <div class="breadcrumbs">
-            <i class="fas fa-home"></i>
-            <span>Developer Dashboard</span>
-        </div>
-        <h1><i class="fas fa-code"></i> Developer Dashboard</h1>
-        <p class="subtitle">Monitor all projects and manage defect progress across the system</p>
-
-        <div class="action-bar">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
-            </div>
-            <form class="sort-box" method="get" action="{{ url_for('developer.dashboard') }}">
-                <label for="date_range" class="meta-label" style="margin:0;">Date Range</label>
-                <select id="date_range" name="date_range" class="sort-select" onchange="this.form.submit()">
-                    <option value="all" {% if date_range == 'all' %}selected{% endif %}>All Time</option>
-                    <option value="week" {% if date_range == 'week' %}selected{% endif %}>Last 7 Days</option>
-                    <option value="month" {% if date_range == 'month' %}selected{% endif %}>Last 30 Days</option>
-                    <option value="3months" {% if date_range == '3months' %}selected{% endif %}>Last 3 Months</option>
-                </select>
-                <label for="status_filter" class="meta-label" style="margin:0;">Filter</label>
-                <select id="status_filter" name="status_filter" class="sort-select" onchange="this.form.submit()">
-                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Projects</option>
-                    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
-                    <option value="complete" {% if status_filter == 'complete' %}selected{% endif %}>Complete</option>
-                    <option value="started" {% if status_filter == 'started' %}selected{% endif %}>Just Started</option>
-                </select>
-                <label for="sort" class="meta-label" style="margin:0;">Sort</label>
-                <select id="sort" name="sort" class="sort-select" onchange="this.form.submit()">
-                    <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Newest first</option>
-                    <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest first</option>
-                </select>
-            </form>
-        </div>
-
-        <!-- Statistics Overview -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3><i class="fas fa-building"></i> Total Projects</h3>
-                <div class="stat-number">{{ scans|length }}</div>
-                <p>Active building scans in system</p>
+    <main class="bento-grid">
+        <section class="bento-card hero span-2">
+            <div class="hero-top">
+                <div class="breadcrumbs" style="color: var(--muted); display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                    <i class="fas fa-home" style="color: var(--accent-2);"></i>
+                    <span>Developer Dashboard</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; justify-content: flex-end;">
+                    <span class="eyebrow"><i class="fas fa-bolt"></i> Live status</span>
+                    <button id="themeToggle" class="theme-toggle" type="button">
+                        <i class="fas fa-moon"></i>
+                        <span>Dark</span>
+                    </button>
+                </div>
             </div>
 
-            <div class="stat-card">
-                <h3><i class="fas fa-exclamation-triangle"></i> Total Defects</h3>
-                <div class="stat-number">{{ total_defects }}</div>
-                <p>Defects across all projects</p>
+            <div>
+                <h1><i class="fas fa-code"></i> Developer Dashboard</h1>
+                <p class="subtitle">Monitor every scan, filter by status, and glide through project progress with a bento-inspired overview.</p>
+                <div class="hero-metrics">
+                    <span class="metric-chip"><i class="fas fa-building"></i> {{ scans|length }} projects</span>
+                    <span class="metric-chip" style="background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.25); color: var(--ink);"><i class="fas fa-check-circle"></i> {{ total_fixed }} fixed</span>
+                </div>
             </div>
 
-            <div class="stat-card">
-                <h3><i class="fas fa-clock"></i> Under Review</h3>
-                <div class="stat-number">{{ total_review }}</div>
-                <p>Defects currently being reviewed</p>
+            <div class="hero-actions">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search projects..." onkeyup="filterProjects()">
+                </div>
+                <form class="sort-box" method="get" action="{{ url_for('developer.dashboard') }}">
+                    <div>
+                        <label for="date_range" class="meta-label">Date Range</label>
+                        <select id="date_range" name="date_range" class="sort-select" onchange="this.form.submit()">
+                            <option value="all" {% if date_range == 'all' %}selected{% endif %}>All Time</option>
+                            <option value="week" {% if date_range == 'week' %}selected{% endif %}>Last 7 Days</option>
+                            <option value="month" {% if date_range == 'month' %}selected{% endif %}>Last 30 Days</option>
+                            <option value="3months" {% if date_range == '3months' %}selected{% endif %}>Last 3 Months</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="status_filter" class="meta-label">Filter</label>
+                        <select id="status_filter" name="status_filter" class="sort-select" onchange="this.form.submit()">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Projects</option>
+                            <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="complete" {% if status_filter == 'complete' %}selected{% endif %}>Complete</option>
+                            <option value="started" {% if status_filter == 'started' %}selected{% endif %}>Just Started</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="sort" class="meta-label">Sort</label>
+                        <select id="sort" name="sort" class="sort-select" onchange="this.form.submit()">
+                            <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Newest first</option>
+                            <option value="oldest" {% if sort == 'oldest' %}selected{% endif %}>Oldest first</option>
+                        </select>
+                    </div>
+                </form>
             </div>
+        </section>
 
-            <div class="stat-card">
-                <h3><i class="fas fa-check-circle"></i> Fixed</h3>
-                <div class="stat-number">{{ total_fixed }}</div>
-                <p>Defects marked as resolved</p>
+        <section class="bento-card span-2 stats-card">
+            <div class="projects-header">
+                <div>
+                    <p class="pill">Health overview</p>
+                    <h2 style="margin-top: 0.35rem;">System Metrics</h2>
+                </div>
+                <span class="pill" style="background: rgba(34,211,238,0.12); color: var(--ink);">Auto-updated</span>
             </div>
-        </div>
-
-        <!-- Projects List -->
-        {% if scans %}
-        <div class="projects-grid" id="projectsGrid">
-            {% for scan, defect_count, reported, review, fixed in scans %}
-            <div class="project-card" data-name="{{ scan.name|lower }}">
-                <div class="project-header">
-                    <h3 class="project-title">
-                        <i class="fas fa-cube"></i>
-                        {{ scan.name }}
-                    </h3>
-                    <span class="project-id">#{{ scan.id }}</span>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3><i class="fas fa-building"></i> Total Projects</h3>
+                    <div class="stat-number">{{ scans|length }}</div>
+                    <p>Active building scans in system</p>
                 </div>
 
-                <div class="project-meta">
-                    <div class="meta-item">
-                        <div class="meta-label">Created</div>
-                        <div class="meta-value">{{ scan.created_at.strftime('%Y-%m-%d') if scan.created_at else 'Unknown' }}</div>
+                <div class="stat-card">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Total Defects</h3>
+                    <div class="stat-number">{{ total_defects }}</div>
+                    <p>Defects across all projects</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-clock"></i> Under Review</h3>
+                    <div class="stat-number">{{ total_review }}</div>
+                    <p>Defects currently being reviewed</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3><i class="fas fa-check-circle"></i> Fixed</h3>
+                    <div class="stat-number">{{ total_fixed }}</div>
+                    <p>Defects marked as resolved</p>
+                </div>
+            </div>
+        </section>
+
+        {% if scans %}
+        <section class="bento-card span-2">
+            <div class="projects-header">
+                <div>
+                    <p class="pill">Portfolio</p>
+                    <h2 style="margin-top: 0.35rem;">Projects</h2>
+                </div>
+                <span class="pill">{{ scans|length }} items</span>
+            </div>
+            <div class="projects-grid" id="projectsGrid">
+                {% for scan, defect_count, reported, review, fixed in scans %}
+                <div class="project-card" data-name="{{ scan.name|lower }}">
+                    <div class="project-header">
+                        <h3 class="project-title">
+                            <i class="fas fa-cube"></i>
+                            {{ scan.name }}
+                        </h3>
+                        <span class="project-id">#{{ scan.id }}</span>
                     </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Total Defects</div>
-                        <div class="meta-value">{{ defect_count }}</div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Model File</div>
-                        <div class="meta-value">{{ scan.model_path.split('/')[-1] if scan.model_path else 'None' }}</div>
-                    </div>
-                    <div class="meta-item">
-                        <div class="meta-label">Status</div>
-                        <div class="meta-value">
-                            {% if fixed == defect_count and defect_count > 0 %}
-                                Complete
-                            {% elif review > 0 %}
-                                In Progress
-                            {% elif reported > 0 %}
-                                Started
-                            {% else %}
-                                No Defects
-                            {% endif %}
+
+                    <div class="project-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">Created</div>
+                            <div class="meta-value">{{ scan.created_at.strftime('%Y-%m-%d') if scan.created_at else 'Unknown' }}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Total Defects</div>
+                            <div class="meta-value">{{ defect_count }}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Model File</div>
+                            <div class="meta-value">{{ scan.model_path.split('/')[-1] if scan.model_path else 'None' }}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Status</div>
+                            <div class="meta-value">
+                                {% if fixed == defect_count and defect_count > 0 %}
+                                    Complete
+                                {% elif review > 0 %}
+                                    In Progress
+                                {% elif reported > 0 %}
+                                    Started
+                                {% else %}
+                                    No Defects
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="status-badges">
-                    {% if reported > 0 %}
-                    <span class="status-badge status-reported">{{ reported }} Reported</span>
-                    {% endif %}
-                    {% if review > 0 %}
-                    <span class="status-badge status-review">{{ review }} Under Review</span>
-                    {% endif %}
-                    {% if fixed > 0 %}
-                    <span class="status-badge status-fixed">{{ fixed }} Fixed</span>
-                    {% endif %}
-                </div>
-
-                {% if defect_count > 0 %}
-                <div class="progress-container">
-                    {% set progress_percent = ((fixed / defect_count) * 100) | int %}
-                    <div class="progress-label">
-                        <span>Progress</span>
-                        <span>{{ progress_percent }}%</span>
+                    <div class="status-badges">
+                        {% if reported > 0 %}
+                        <span class="status-badge status-reported">{{ reported }} Reported</span>
+                        {% endif %}
+                        {% if review > 0 %}
+                        <span class="status-badge status-review">{{ review }} Under Review</span>
+                        {% endif %}
+                        {% if fixed > 0 %}
+                        <span class="status-badge status-fixed">{{ fixed }} Fixed</span>
+                        {% endif %}
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill {% if progress_percent == 100 %}complete{% endif %}" style="width: {{ progress_percent }}%"></div>
+
+                    {% if defect_count > 0 %}
+                    <div class="progress-container">
+                        {% set progress_percent = ((fixed / defect_count) * 100) | int %}
+                        <div class="progress-label">
+                            <span>Progress</span>
+                            <span>{{ progress_percent }}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill {% if progress_percent == 100 %}complete{% endif %}" style="width: {{ progress_percent }}%"></div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="project-actions">
+                        <a href="{{ url_for('developer.view_scan', scan_id=scan.id) }}" class="btn btn-primary">
+                            <i class="fas fa-eye"></i> View Defects & Update Progress
+                        </a>
                     </div>
                 </div>
-                {% endif %}
-
-                <div class="project-actions">
-                    <a href="{{ url_for('developer.view_scan', scan_id=scan.id) }}" class="btn btn-primary">
-                        <i class="fas fa-eye"></i> View Defects & Update Progress
-                    </a>
-                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
+        </section>
         {% else %}
-        <div class="empty-state">
+        <section class="bento-card span-2 empty-state">
             <i class="fas fa-folder-open"></i>
             <h3>No Projects Yet</h3>
             <p>Projects will appear here once users upload and process their scan data.</p>
-        </div>
+        </section>
         {% endif %}
 
-        <!-- Recent Activity Feed -->
-        <section class="activity-section" style="margin-top: 3rem; padding: 2rem; background: white; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem;">
-                <i class="fas fa-history" style="font-size: 1.5rem; color: #3b82f6;"></i>
-                <h2 style="margin: 0; font-size: 1.5rem; color: #1e293b;">Recent Activity</h2>
+        <section class="bento-card span-2 activity-section">
+            <div class="activity-title">
+                <i class="fas fa-history" style="font-size: 1.4rem; color: var(--accent-2);"></i>
+                <h2>Recent Activity</h2>
             </div>
-            <div id="activity-feed" style="max-height: 400px; overflow-y: auto;">
-                <div style="text-align: center; color: #94a3b8; padding: 2rem;">
-                    <i class="fas fa-spinner fa-spin" style="font-size: 1.5rem;"></i>
+            <div id="activity-feed" class="activity-feed">
+                <div style="text-align: center; color: var(--muted); padding: 2rem;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 1.2rem;"></i>
                     <p>Loading activity...</p>
                 </div>
             </div>
@@ -249,6 +412,40 @@
     </main>
 
     <script>
+        // Theme toggle handling
+        function applyTheme(theme) {
+            const body = document.body;
+            const toggle = document.getElementById('themeToggle');
+            const icon = toggle.querySelector('i');
+            const label = toggle.querySelector('span');
+
+            if (theme === 'light') {
+                body.classList.add('light-mode');
+                icon.className = 'fas fa-sun';
+                label.textContent = 'Light';
+            } else {
+                body.classList.remove('light-mode');
+                icon.className = 'fas fa-moon';
+                label.textContent = 'Dark';
+                theme = 'dark';
+            }
+
+            localStorage.setItem('dashboard-theme', theme);
+        }
+
+        function toggleTheme() {
+            const current = localStorage.getItem('dashboard-theme') || 'dark';
+            applyTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
+            const toggle = document.getElementById('themeToggle');
+            if (toggle) {
+                toggle.addEventListener('click', toggleTheme);
+            }
+        });
+
         // Show flash messages as toasts
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -267,14 +464,15 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-                padding: 1rem 1.5rem;
+                background: #0b1020;
+                color: var(--ink);
+                border-radius: 10px;
+                box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+                padding: 1rem 1.4rem;
                 display: flex;
                 align-items: center;
                 gap: 12px;
-                max-width: 400px;
+                max-width: 420px;
                 z-index: 10000;
                 animation: slideIn 0.3s ease-out;
                 border-left: 4px solid ${type === 'success' ? '#10b981' : '#ef4444'};
@@ -312,11 +510,11 @@
                 .then(activities => {
                     const feed = document.getElementById('activity-feed');
                     if (activities.length === 0) {
-                        feed.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 2rem;"><p>No recent activity</p></div>';
+                        feed.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 2rem;"><p>No recent activity</p></div>';
                         return;
                     }
                     
-                    let html = '<div style="border-left: 2px solid #e2e8f0; padding: 1rem 0;">';
+                    let html = '<div style="border-left: 2px solid rgba(255,255,255,0.1); padding: 1rem 0;">';
                     activities.forEach((activity, index) => {
                         const iconMap = {
                             'status updated': 'fa-check',
@@ -329,18 +527,18 @@
                         const timeStr = new Date(activity.timestamp + 'Z').toLocaleString();
                         
                         html += `
-                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; position: relative; padding-left: 1.5rem;">
-                                <div style="position: absolute; left: -8px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: #3b82f6; border: 2px solid white;"></div>
+                            <div style="display: flex; gap: 1rem; margin-bottom: 1rem; position: relative; padding-left: 1.7rem;">
+                                <div style="position: absolute; left: 0; top: 10px; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: #22d3ee; border: 2px solid var(--bg);"></div>
                                 <div style="flex: 1;">
                                     <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
                                         <div>
-                                            <strong style="color: #1e293b;">${activity.action}</strong>
-                                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
-                                                Defect #${activity.defect_id}: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #7c3aed;">${activity.old_value}</code>
-                                                → <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #0d9488;">${activity.new_value}</code>
+                                            <strong style="color: var(--ink); display: inline-flex; align-items: center; gap: 6px;"><i class="fas ${icon}" style="color: #22d3ee;"></i> ${activity.action}</strong>
+                                            <p style="margin: 4px 0 0 0; color: var(--muted); font-size: 0.9rem;">
+                                                Defect #${activity.defect_id}: <code style="background: var(--panel); padding: 2px 6px; border-radius: 4px; color: var(--accent); border: 1px solid var(--edge);">${activity.old_value}</code>
+                                                → <code style="background: var(--panel); padding: 2px 6px; border-radius: 4px; color: var(--accent-2); border: 1px solid var(--edge);">${activity.new_value}</code>
                                             </p>
                                         </div>
-                                        <span style="color: #94a3b8; font-size: 0.85rem; white-space: nowrap;">${timeStr}</span>
+                                        <span style="color: var(--muted); font-size: 0.85rem; white-space: nowrap;">${timeStr}</span>
                                     </div>
                                 </div>
                             </div>

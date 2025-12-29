@@ -1,8 +1,25 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+import json
+import os
+
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from app.extensions import db
 from app.models import Scan, Defect
 
 developer_bp = Blueprint("developer", __name__)
+
+
+def _load_latest_upload_metadata():
+    """Load latest upload metadata (address, unit, scan date) for display."""
+    upload_root = os.path.join(current_app.instance_path, "uploads", "upload_data")
+    metadata_path = os.path.join(upload_root, "latest_upload.json")
+    if not os.path.exists(metadata_path):
+        return None
+    try:
+        with open(metadata_path, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, json.JSONDecodeError):
+        current_app.logger.warning("Could not read upload metadata", exc_info=True)
+        return None
 
 
 @developer_bp.route("/developer", methods=["GET"])
@@ -72,8 +89,9 @@ def view_scan(scan_id):
     """View detailed defects for a specific scan"""
     scan = Scan.query.get_or_404(scan_id)
     defects = Defect.query.filter_by(scan_id=scan_id).order_by(Defect.created_at.desc()).all()
+    upload_metadata = _load_latest_upload_metadata()
 
-    return render_template("developer/scan_detail.html", scan=scan, defects=defects)
+    return render_template("developer/scan_detail.html", scan=scan, defects=defects, upload_metadata=upload_metadata)
 
 
 @developer_bp.route("/developer/defect/<int:defect_id>/update", methods=["POST"])

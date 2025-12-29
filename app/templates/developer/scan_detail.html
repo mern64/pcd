@@ -6,657 +6,433 @@
     <title>{{ scan.name }} - Developer Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+        :root {
+            --bg: #0b1020;
+            --panel: rgba(255, 255, 255, 0.04);
+            --ink: #e2e8f0;
+            --muted: #94a3b8;
+            --edge: rgba(255, 255, 255, 0.08);
+            --accent: #7c3aed;
+            --accent-2: #22d3ee;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+
         body {
-            font-family: system-ui, sans-serif;
             margin: 0;
-            padding: 20px;
-            background: #f8fafc;
-            color: #1e293b;
+            font-family: 'Space Grotesk', 'Manrope', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.14), transparent 36%),
+                        radial-gradient(circle at 85% 10%, rgba(34, 211, 238, 0.1), transparent 32%),
+                        linear-gradient(135deg, #0b1020 0%, #0f172a 45%, #0a101d 100%);
+            color: var(--ink);
+            min-height: 100vh;
+            padding: 1.5rem 1rem 3rem;
         }
 
-        /* Breadcrumbs */
-        .breadcrumbs {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            font-size: 0.9rem;
-            color: #64748b;
-        }
-        .breadcrumbs a {
-            color: #3b82f6;
-            text-decoration: none;
-        }
-        .breadcrumbs a:hover {
-            text-decoration: underline;
-        }
-        .breadcrumbs i {
-            font-size: 0.75rem;
+        .bento-grid {
+            max-width: 1240px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1rem;
+            align-items: start;
         }
 
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            max-width: 400px;
-            z-index: 10000;
-            animation: slideIn 0.3s ease-out;
-            border-left: 4px solid #3b82f6;
-        }
-        .toast.success { border-left-color: #10b981; }
-        .toast.error { border-left-color: #ef4444; }
-        .toast i { font-size: 1.2rem; }
-        .toast.success i { color: #10b981; }
-        .toast.error i { color: #ef4444; }
-        @keyframes slideIn {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .bento-card {
+            position: relative;
+            padding: 1.25rem 1.35rem;
+            border-radius: 18px;
+            background: linear-gradient(150deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02));
+            border: 1px solid var(--edge);
+            box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+            overflow: hidden;
         }
 
-        /* Loading Spinner */
-        .spinner {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 9999;
+        .bento-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(120% 120% at 100% 0%, rgba(124,58,237,0.12), transparent 60%);
+            pointer-events: none;
         }
+
+        .span-2 { grid-column: span 2; }
+        @media (max-width: 960px) { .span-2 { grid-column: span 1; } }
+
+        .breadcrumbs { display: flex; align-items: center; gap: 0.55rem; color: var(--muted); font-size: 0.92rem; }
+        .breadcrumbs a { color: var(--accent-2); text-decoration: none; }
+        .breadcrumbs a:hover { text-decoration: underline; }
+
+        .hero { display: grid; gap: 0.8rem; }
+        .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+        .back-link { color: var(--ink); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; }
+        .back-link i { color: var(--accent-2); }
+        .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 0.35rem 0.75rem; border-radius: 999px; background: rgba(34,211,238,0.12); color: #e0f2fe; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+        h1 { margin: 0; font-size: 2rem; display: flex; align-items: center; gap: 10px; color: #f8fafc; }
+        h1 i { color: var(--accent-2); }
+        .subtitle { margin: 0.25rem 0 0.8rem; color: var(--muted); max-width: 820px; }
+
+        .chip-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .chip { padding: 0.5rem 0.75rem; border-radius: 12px; border: 1px solid var(--edge); background: rgba(255,255,255,0.05); font-weight: 700; color: #e2e8f0; }
+        .chip i { color: var(--accent-2); }
+
+        .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+        .btn { padding: 0.6rem 1.05rem; border-radius: 10px; border: 1px solid rgba(34,211,238,0.35); cursor: pointer; font-size: 0.95rem; font-weight: 700; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; background: linear-gradient(135deg, #22d3ee, #7c3aed); color: #0b1020; }
+        .btn.secondary { background: rgba(255,255,255,0.06); color: var(--ink); border-color: var(--edge); }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(34,211,238,0.25); }
+
+        .bulk-card { display: grid; gap: 0.75rem; position: sticky; top: 10px; z-index: 10; }
+        .select-all-container { display: flex; align-items: center; gap: 0.55rem; padding: 0.65rem 0.8rem; border-radius: 12px; background: #0f172a; border: 1px solid rgba(34,211,238,0.6); }
+        .defect-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: #22d3ee; }
+        .bulk-actions-bar { display: none; align-items: center; gap: 0.75rem; flex-wrap: wrap; padding: 0.85rem 1rem; border-radius: 12px; background: #0f172a; border: 1px solid rgba(34,211,238,0.6); }
+        .bulk-actions-bar.active { display: flex; }
+        .count { font-weight: 700; color: #e0f2fe; }
+        .bulk-actions-bar select { padding: 0.55rem 0.7rem; border-radius: 10px; border: 1px solid var(--edge); background: rgba(255,255,255,0.06); color: var(--ink); font-weight: 600; }
+
+        .charts-card h3, .locations-card h3 { margin: 0 0 0.4rem; color: #f8fafc; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; }
+        .chart-box { padding: 0.85rem; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--edge); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+
+        .locations-card { display: grid; gap: 0.75rem; }
+        .heat-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .heat-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+        .heat-bar span { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); }
+
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; }
+        .info-item { padding: 0.75rem 0.85rem; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid var(--edge); display: flex; flex-direction: column; gap: 6px; }
+        .info-label { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.02em; text-transform: uppercase; font-weight: 700; }
+        .info-value { font-size: 0.98rem; font-weight: 700; color: #f8fafc; }
+        .info-note { color: var(--muted); font-size: 0.9rem; margin: 0; }
+
+        .defects-wrapper { display: grid; gap: 0.85rem; }
+        .defects-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+        .defect-card { background: linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)); border: 1px solid var(--edge); border-radius: 14px; box-shadow: 0 12px 28px rgba(0,0,0,0.35); overflow: hidden; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.2s ease; }
+        .defect-card:hover { transform: translateY(-3px); border-color: rgba(124,58,237,0.35); box-shadow: 0 14px 34px rgba(0,0,0,0.42); }
+
+        .defect-header { padding: 1rem; border-bottom: 1px solid var(--edge); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+        .defect-title { margin: 0; display: flex; align-items: center; gap: 10px; color: #f8fafc; font-size: 1rem; font-weight: 700; }
+        .defect-id { background: rgba(34,211,238,0.12); color: #e0f2fe; padding: 4px 8px; border-radius: 8px; font-size: 0.82rem; border: 1px solid rgba(34,211,238,0.25); }
+        .status-badge { padding: 5px 9px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; border: 1px solid var(--edge); }
+        .status-reported { background: rgba(245, 158, 11, 0.18); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+        .status-underreview { background: rgba(59, 130, 246, 0.16); color: #bfdbfe; border-color: rgba(59,130,246,0.35); }
+        .status-fixed { background: rgba(16, 185, 129, 0.16); color: #bbf7d0; border-color: rgba(16,185,129,0.35); }
+        .priority-badge { padding: 4px 8px; border-radius: 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; border: 1px solid var(--edge); }
+        .priority-urgent { background: rgba(239,68,68,0.16); color: #fecdd3; border-color: rgba(239,68,68,0.35); }
+        .priority-high { background: rgba(245,158,11,0.18); color: #fcd34d; border-color: rgba(245,158,11,0.35); }
+        .priority-medium { background: rgba(59,130,246,0.16); color: #bfdbfe; border-color: rgba(59,130,246,0.35); }
+        .priority-low { background: rgba(16,185,129,0.16); color: #bbf7d0; border-color: rgba(16,185,129,0.35); }
+
+        .defect-content { padding: 1rem; display: grid; gap: 0.9rem; }
+        .defect-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .defect-field { display: flex; flex-direction: column; gap: 4px; }
+        .field-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.02em; }
+        .field-value { font-size: 0.95rem; color: #f8fafc; font-weight: 600; }
+        .coordinates { font-family: 'Courier New', monospace; background: rgba(255,255,255,0.04); padding: 8px; border-radius: 8px; border: 1px solid var(--edge); color: #e2e8f0; }
+        .severity-high { color: #fca5a5; }
+        .severity-medium { color: #fcd34d; }
+        .severity-low { color: #bbf7d0; }
+
+        .defect-image { margin-top: 0.5rem; padding-top: 0.6rem; border-top: 1px dashed var(--edge); }
+        .defect-image img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; border: 1px solid var(--edge); cursor: pointer; transition: transform 0.18s ease; }
+        .defect-image img:hover { transform: scale(1.02); }
+
+        .update-form { margin-top: 0.5rem; padding: 1rem; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px dashed var(--edge); }
+        .form-group { margin-bottom: 0.85rem; }
+        .form-group label { display: block; margin-bottom: 0.35rem; font-weight: 700; color: #e2e8f0; }
+        .form-group select, .form-group textarea { width: 100%; padding: 0.65rem 0.75rem; border-radius: 10px; border: 1px solid var(--edge); background: rgba(255,255,255,0.05); color: #f8fafc; font-weight: 600; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+
+        .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--muted); border: 1px dashed var(--edge); background: rgba(255,255,255,0.02); border-radius: 14px; }
+        .empty-state i { font-size: 3.2rem; color: rgba(255,255,255,0.35); margin-bottom: 0.8rem; }
+        .empty-state h3 { margin: 0 0 0.5rem; color: #f8fafc; }
+
+        /* Toast + modal */
+        .toast { position: fixed; top: 20px; right: 20px; background: #0b1020; color: var(--ink); border-radius: 10px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35); padding: 1rem 1.4rem; display: flex; align-items: center; gap: 12px; max-width: 420px; z-index: 10000; animation: slideIn 0.3s ease-out; border-left: 4px solid var(--accent-2); }
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(420px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.9); z-index: 10000; justify-content: center; align-items: center; cursor: zoom-out; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 10px; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 16px 40px rgba(0,0,0,0.45); }
+        .lightbox-close { position: absolute; top: 20px; right: 30px; color: white; font-size: 2rem; cursor: pointer; background: rgba(0, 0, 0, 0.5); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+        .lightbox-close:hover { background: rgba(0, 0, 0, 0.75); }
+
+        .spinner { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; }
         .spinner.active { display: block; }
-        .spinner-circle {
-            width: 60px;
-            height: 60px;
-            border: 4px solid #e5e7eb;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .spinner-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.3);
-            z-index: 9998;
-        }
+        .spinner-circle { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.15); border-top-color: var(--accent-2); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 9998; }
         .spinner-backdrop.active { display: block; }
 
-        /* Lightbox Modal */
-        .lightbox {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            justify-content: center;
-            align-items: center;
-            cursor: zoom-out;
-        }
-        .lightbox.active { display: flex; }
-        .lightbox img {
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border-radius: 8px;
-        }
-        .lightbox-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.5);
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-        .lightbox-close:hover {
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .header {
-            background: linear-gradient(135deg, #1e40af, #3b82f6);
-            color: white;
-            padding: 2rem;
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(30, 64, 175, 0.2);
-        }
-
-        .header h1 {
-            margin: 0 0 0.5rem 0;
-            font-size: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .header p {
-            margin: 0;
-            opacity: 0.9;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
-        }
-
-        .back-link:hover {
-            color: #2563eb;
-        }
-
-        .defects-grid {
-            display: grid;
-            gap: 1.5rem;
-        }
-
-        .defect-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .defect-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-        }
-
-        .defect-header {
-            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-            padding: 1.5rem;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .defect-title {
-            margin: 0 0 1rem 0;
-            font-size: 1.2rem;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .defect-id {
-            background: #3b82f6;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-reported { background: #fef3c7; color: #92400e; }
-        .status-review { background: #dbeafe; color: #1e40af; }
-        .status-fixed { background: #d1fae5; color: #065f46; }
-
-        .defect-content {
-            padding: 1.5rem;
-        }
-
-        .defect-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .defect-field {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .field-label {
-            font-size: 0.8rem;
-            color: #64748b;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .field-value {
-            font-size: 0.95rem;
-            color: #374151;
-            font-weight: 500;
-        }
-
-        .coordinates {
-            font-family: 'Courier New', monospace;
-            background: #f8fafc;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .severity-high { color: #dc2626; }
-        .severity-medium { color: #d97706; }
-        .severity-low { color: #16a34a; }
-
-        .defect-image {
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .defect-image img {
-            max-width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .defect-image img:hover {
-            transform: scale(1.02);
-        }
-
-        .update-form {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e2e8f0;
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 1.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.95rem;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            border: none;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #2563eb;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: #6b7280;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #4b5563;
-        }
-
-        /* Bulk Actions */
-        .bulk-actions-bar {
-            position: sticky;
-            top: 0;
-            background: white;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 1.5rem;
-            display: none;
-            z-index: 100;
-        }
-        .bulk-actions-bar.active {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        .bulk-actions-bar .count {
-            font-weight: 600;
-            color: #3b82f6;
-        }
-        .defect-checkbox {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            accent-color: #3b82f6;
-        }
-        .select-all-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: #f9fafb;
-            border-radius: 8px;
-        }
-
-        /* Priority Badge */
-        .priority-badge {
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .priority-urgent { background: #fee2e2; color: #991b1b; }
-        .priority-high { background: #fef3c7; color: #92400e; }
-        .priority-medium { background: #dbeafe; color: #1e40af; }
-        .priority-low { background: #d1fae5; color: #065f46; }
-
-        /* Print Styles */
+        /* Print */
         @media print {
-            body { background: white; }
-            .breadcrumbs, .back-link, .update-form, .btn, .bulk-actions-bar, .select-all-container { display: none !important; }
-            .header { background: white; color: black; box-shadow: none; border-bottom: 2px solid black; }
-            .defect-card { page-break-inside: avoid; border: 1px solid #ccc; }
-            .defect-header { background: #f5f5f5; }
-            .lightbox, .spinner, .spinner-backdrop, .toast { display: none !important; }
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #64748b;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        .empty-state h3 {
-            margin: 0 0 0.5rem 0;
-            color: #374151;
-        }
-
-        @media (max-width: 768px) {
-            .header {
-                padding: 1.5rem;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .defect-grid {
-                grid-template-columns: 1fr;
-            }
+            body { background: white; color: black; }
+            .btn, .bulk-card, .lightbox, .spinner, .spinner-backdrop, .toast { display: none !important; }
+            .bento-grid { display: block; }
+            .bento-card { box-shadow: none; background: white; color: black; border: 1px solid #ccc; }
+            .defect-card { page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    <div class="breadcrumbs">
-        <a href="{{ url_for('developer.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
-        <i class="fas fa-chevron-right"></i>
-        <span>{{ scan.name }}</span>
-    </div>
-    <a href="{{ url_for('developer.dashboard') }}" class="back-link">
-        <i class="fas fa-arrow-left"></i> Back to Dashboard
-    </a>
-
-    <div class="header">
-        <h1><i class="fas fa-cube"></i> {{ scan.name }}</h1>
-        <p>Manage defect progress and status updates - Total: {{ defects|length }} defect(s)</p>
-        <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
-            <a href="{{ url_for('developer.export_scan_csv', scan_id=scan.id) }}" class="btn btn-secondary">
-                <i class="fas fa-download"></i> Export CSV
-            </a>
-            <button onclick="window.print()" class="btn btn-secondary">
-                <i class="fas fa-print"></i> Print Report
-            </button>
-        </div>
-    </div>
-
-    {% if defects %}
-    <div class="select-all-container">
-        <input type="checkbox" id="select-all" class="defect-checkbox" onchange="toggleSelectAll()">
-        <label for="select-all" style="cursor: pointer; margin: 0; font-weight: 600;">Select All Defects</label>
-    </div>
-
-    <div class="bulk-actions-bar" id="bulk-actions">
-        <span class="count"><span id="selected-count">0</span> selected</span>
-        <form method="post" action="{{ url_for('developer.bulk_update_defects', scan_id=scan.id) }}" id="bulk-form" onsubmit="return confirmBulkUpdate()" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 0;">
-
-            <select name="bulk_status" style="padding: 0.55rem 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; background: #fff;">
-                <option value="">-- Update Status --</option>
-                <option value="Reported">Reported</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Fixed">Fixed</option>
-            </select>
-            <select name="bulk_priority" style="padding: 0.55rem 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.95rem; background: #fff;">
-                <option value="">-- Update Priority --</option>
-                <option value="Urgent">Urgent</option>
-                <option value="High">High</option>
-                <option value="Medium">Medium</option>
-                <option value="Low">Low</option>
-            </select>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-edit"></i> Apply to Selected
-            </button>
-            <button type="button" class="btn btn-secondary" onclick="clearSelection()">
-                <i class="fas fa-times"></i> Clear
-            </button>
-        </form>
-    </div>
-    {% endif %}
-
-    <!-- Analytics & Charts Section -->
-    <section class="analytics-section" style="margin-bottom: 0.75rem; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; align-items: start;">
-        <!-- Status Pie Chart -->
-        <div style="background: white; padding: 0.75rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-            <h3 style="margin: 0 0 0.5rem 0; color: #1e293b; font-size: 1rem;">Status Distribution</h3>
-            <canvas id="statusChart" width="200" height="160"></canvas>
-        </div>
-        
-        <!-- Priority Bar Chart -->
-        <div style="background: white; padding: 0.75rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-            <h3 style="margin: 0 0 0.5rem 0; color: #1e293b; font-size: 1rem;">Priority Breakdown</h3>
-            <canvas id="priorityChart" width="200" height="160"></canvas>
-        </div>
-        
-        <!-- Trend Line Chart -->
-        <div style="background: white; padding: 0.75rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-            <h3 style="margin: 0 0 0.5rem 0; color: #1e293b; font-size: 1rem;">Defects Over Time (30 Days)</h3>
-            <canvas id="trendChart" width="200" height="160"></canvas>
-        </div>
-    </section>
-
-    <!-- Locations List Section -->
-    <section style="margin-bottom: 2rem; background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);">
-        <h3 style="margin-top: 0; color: #1e293b;">Defect Locations</h3>
-        <div id="locationsList">
-            <p style="color: #94a3b8;">Loading locations...</p>
-        </div>
-    </section>
-
-    
-
-    <div class="defects-grid">
-        {% for defect in defects %}
-        <div class="defect-card">
-            <div class="defect-header">
-                <div class="defect-title">
-                    <input type="checkbox" class="defect-checkbox" data-defect-id="{{ defect.id }}" onchange="updateBulkActions()" style="margin-right: 12px;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <span class="defect-id">#{{ defect.id }}</span>
-                    <span class="status-badge status-{{ defect.status.lower().replace(' ', '') }}">
-                        {{ defect.status }}
-                    </span>
-                    {% set priority = defect.priority or 'Medium' %}
-                    <span class="priority-badge priority-{{ priority.lower() }}">{{ priority }}</span>
+    {% set reported_count = defects|selectattr('status', 'equalto', 'Reported')|list|length %}
+    {% set review_count = defects|selectattr('status', 'equalto', 'Under Review')|list|length %}
+    {% set fixed_count = defects|selectattr('status', 'equalto', 'Fixed')|list|length %}
+    <main class="bento-grid">
+        <section class="bento-card hero span-2">
+            <div class="hero-top">
+                <div class="breadcrumbs">
+                    <a href="{{ url_for('developer.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+                    <i class="fas fa-chevron-right"></i>
+                    <span>{{ scan.name }}</span>
                 </div>
+                <a href="{{ url_for('developer.dashboard') }}" class="back-link"><i class="fas fa-arrow-left"></i> Back</a>
             </div>
+            <div>
+                <span class="eyebrow"><i class="fas fa-bolt"></i> Scan overview</span>
+                <h1><i class="fas fa-cube"></i> {{ scan.name }}</h1>
+                <p class="subtitle">Manage defect progress, bulk updates, and review activity for this scan. Total: {{ defects|length }} defect(s).</p>
+            </div>
+            <div class="chip-row">
+                <span class="chip"><i class="fas fa-hashtag"></i> ID {{ scan.id }}</span>
+                <span class="chip"><i class="fas fa-calendar"></i> {{ scan.created_at.strftime('%Y-%m-%d') if scan.created_at else 'Unknown date' }}</span>
+                <span class="chip"><i class="fas fa-file"></i> {{ scan.model_path.split('/')[-1] if scan.model_path else 'No model file' }}</span>
+                <span class="chip" style="background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.25); color: #ccf4e0;"><i class="fas fa-check-circle"></i> {{ fixed_count }} fixed</span>
+                <span class="chip" style="background: rgba(59,130,246,0.14); border-color: rgba(59,130,246,0.25); color: #dbeafe;"><i class="fas fa-hourglass-half"></i> {{ review_count }} under review</span>
+                <span class="chip" style="background: rgba(245,158,11,0.16); border-color: rgba(245,158,11,0.35); color: #fcd34d;"><i class="fas fa-flag"></i> {{ reported_count }} reported</span>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('developer.export_scan_csv', scan_id=scan.id) }}" class="btn secondary"><i class="fas fa-download"></i> Export CSV</a>
+                <button onclick="window.print()" class="btn secondary"><i class="fas fa-print"></i> Print Report</button>
+            </div>
+        </section>
 
-            <div class="defect-content">
-                <div class="defect-grid">
-                    <div class="defect-field">
-                        <div class="field-label">Element</div>
-                        <div class="field-value">{{ defect.element or 'Unknown' }}</div>
-                    </div>
-
-                    <div class="defect-field">
-                        <div class="field-label">Type</div>
-                        <div class="field-value">{{ defect.defect_type or 'Unknown' }}</div>
-                    </div>
-
-                    <div class="defect-field">
-                        <div class="field-label">Severity</div>
-                        <div class="field-value severity-{{ defect.severity.lower() }}">
-                            {{ defect.severity or 'Medium' }}
-                        </div>
-                    </div>
-
-                    <div class="defect-field">
-                        <div class="field-label">Location</div>
-                        <div class="field-value">{{ defect.location or 'Not specified' }}</div>
-                    </div>
-
-                    <div class="defect-field">
-                        <div class="field-label">Coordinates</div>
-                        <div class="coordinates">
-                            X: {{ "%.3f"|format(defect.x) }}<br>
-                            Y: {{ "%.3f"|format(defect.y) }}<br>
-                            Z: {{ "%.3f"|format(defect.z) }}
-                        </div>
-                    </div>
-
-                    <div class="defect-field">
-                        <div class="field-label">Created</div>
-                        <div class="field-value">
-                            {{ defect.created_at.strftime('%Y-%m-%d %H:%M') if defect.created_at else 'Unknown' }}
-                        </div>
-                    </div>
+        <section class="bento-card span-2 house-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                <h2 style="margin: 0; color: #f8fafc;">House Details</h2>
+                <span class="chip" style="background: rgba(255,255,255,0.05); color: var(--muted);">From latest upload</span>
+            </div>
+            {% set meta = upload_metadata or {} %}
+            {% if upload_metadata %}
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Project</div>
+                    <div class="info-value">{{ meta.project_name or scan.name }}</div>
                 </div>
-
-                {% if defect.description %}
-                <div class="defect-field">
-                    <div class="field-label">Description</div>
-                    <div class="field-value">{{ defect.description }}</div>
+                <div class="info-item">
+                    <div class="info-label">Address</div>
+                    <div class="info-value">{{ meta.address or 'Not specified' }}</div>
                 </div>
-                {% endif %}
-
-                {% if defect.image_path %}
-                <div class="defect-image">
-                    <div class="field-label">Defect Image</div>
-                    <img src="{{ url_for('developer.serve_defect_image', image_path=defect.image_path) }}" alt="Defect image" />
+                <div class="info-item">
+                    <div class="info-label">Unit</div>
+                    <div class="info-value">{{ meta.unit_no or 'N/A' }}</div>
                 </div>
-                {% endif %}
-
-                {% if defect.notes %}
-                <div class="defect-field">
-                    <div class="field-label">Notes</div>
-                    <div class="field-value">{{ defect.notes }}</div>
+                <div class="info-item">
+                    <div class="info-label">Scan Date</div>
+                    <div class="info-value">{{ meta.scan_date or (scan.created_at.strftime('%Y-%m-%d') if scan.created_at else 'N/A') }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Latitude</div>
+                    <div class="info-value">{{ meta.latitude or 'N/A' }}</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Longitude</div>
+                    <div class="info-value">{{ meta.longitude or 'N/A' }}</div>
+                </div>
+                {% if meta.notes %}
+                <div class="info-item" style="grid-column: span 2;">
+                    <div class="info-label">Notes</div>
+                    <div class="info-value" style="font-weight: 600; color: #cbd5f5;">{{ meta.notes }}</div>
                 </div>
                 {% endif %}
+            </div>
+            {% else %}
+            <p class="info-note">No house details available yet. Upload data to populate project address and scan metadata.</p>
+            {% endif %}
+        </section>
 
-                <form method="post" action="{{ url_for('developer.update_defect_progress', defect_id=defect.id) }}" class="update-form" onsubmit="return confirmUpdate()">
-                    <div class="form-group">
-                        <label for="status-{{ defect.id }}">Update Status:</label>
-                        <select id="status-{{ defect.id }}" name="status" required>
-                            <option value="Reported" {{ 'selected' if defect.status == 'Reported' else '' }}>Reported</option>
-                            <option value="Under Review" {{ 'selected' if defect.status == 'Under Review' else '' }}>Under Review</option>
-                            <option value="Fixed" {{ 'selected' if defect.status == 'Fixed' else '' }}>Fixed</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="priority-{{ defect.id }}">Priority:</label>
-                        <select id="priority-{{ defect.id }}" name="priority" required>
-                            {% set current_priority = defect.priority or 'Medium' %}
-                            <option value="Urgent" {{ 'selected' if current_priority == 'Urgent' else '' }}>Urgent</option>
-                            <option value="High" {{ 'selected' if current_priority == 'High' else '' }}>High</option>
-                            <option value="Medium" {{ 'selected' if current_priority == 'Medium' else '' }}>Medium</option>
-                            <option value="Low" {{ 'selected' if current_priority == 'Low' else '' }}>Low</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="notes-{{ defect.id }}">Add/Update Notes:</label>
-                        <textarea id="notes-{{ defect.id }}" name="notes" placeholder="Add progress notes, repair details, or status updates...">{{ defect.notes or '' }}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Update Defect
-                    </button>
+        {% if defects %}
+        <section class="bento-card span-2 bulk-card">
+            <div class="select-all-container">
+                <input type="checkbox" id="select-all" class="defect-checkbox" onchange="toggleSelectAll()">
+                <label for="select-all" style="cursor: pointer; margin: 0; font-weight: 700;">Select All Defects</label>
+            </div>
+            <div class="bulk-actions-bar" id="bulk-actions">
+                <span class="count"><span id="selected-count">0</span> selected</span>
+                <form method="post" action="{{ url_for('developer.bulk_update_defects', scan_id=scan.id) }}" id="bulk-form" onsubmit="return confirmBulkUpdate()" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin: 0;">
+                    <select name="bulk_status">
+                        <option value="">-- Update Status --</option>
+                        <option value="Reported">Reported</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="Fixed">Fixed</option>
+                    </select>
+                    <select name="bulk_priority">
+                        <option value="">-- Update Priority --</option>
+                        <option value="Urgent">Urgent</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                    <button type="submit" class="btn"><i class="fas fa-edit"></i> Apply to Selected</button>
+                    <button type="button" class="btn secondary" onclick="clearSelection()"><i class="fas fa-times"></i> Clear</button>
                 </form>
             </div>
-        </div>
-        {% endfor %}
-    </div>
+        </section>
+        {% endif %}
 
-    {% if not defects %}
-    <div class="empty-state">
-        <i class="fas fa-search"></i>
-        <h3>No Defects Found</h3>
-        <p>This scan doesn't have any defects yet.</p>
-    </div>
-    {% endif %}
+        <section class="bento-card span-2 charts-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2 style="margin: 0; color: #f8fafc;">Insights</h2>
+                <span class="chip" style="background: rgba(255,255,255,0.05); color: var(--muted);">Auto-updated</span>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <h3>Status Distribution</h3>
+                    <canvas id="statusChart" width="200" height="160"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Priority Breakdown</h3>
+                    <canvas id="priorityChart" width="200" height="160"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>Defects Over Time (30 Days)</h3>
+                    <canvas id="trendChart" width="200" height="160"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="bento-card span-2 locations-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Defect Locations</h3>
+                <span class="chip" style="color: var(--muted);">Heat-weighted by priority</span>
+            </div>
+            <div id="locationsList">
+                <p style="color: var(--muted); margin: 0;">Loading locations...</p>
+            </div>
+        </section>
+
+        <section class="bento-card span-2 defects-wrapper">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0; color: #f8fafc;">Defects</h2>
+                <span class="chip">{{ defects|length }} items</span>
+            </div>
+            <div class="defects-grid">
+                {% for defect in defects %}
+                <div class="defect-card">
+                    <div class="defect-header">
+                        <input type="checkbox" class="defect-checkbox" data-defect-id="{{ defect.id }}" onchange="updateBulkActions()">
+                        <h3 class="defect-title">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+                            <span class="defect-id">#{{ defect.id }}</span>
+                        </h3>
+                        <span class="status-badge status-{{ defect.status.lower().replace(' ', '') }}">{{ defect.status }}</span>
+                        {% set priority = defect.priority or 'Medium' %}
+                        <span class="priority-badge priority-{{ priority.lower() }}">{{ priority }}</span>
+                    </div>
+
+                    <div class="defect-content">
+                        <div class="defect-grid">
+                            <div class="defect-field">
+                                <div class="field-label">Element</div>
+                                <div class="field-value">{{ defect.element or 'Unknown' }}</div>
+                            </div>
+                            <div class="defect-field">
+                                <div class="field-label">Type</div>
+                                <div class="field-value">{{ defect.defect_type or 'Unknown' }}</div>
+                            </div>
+                            <div class="defect-field">
+                                <div class="field-label">Severity</div>
+                                <div class="field-value severity-{{ defect.severity.lower() }}">{{ defect.severity or 'Medium' }}</div>
+                            </div>
+                            <div class="defect-field">
+                                <div class="field-label">Location</div>
+                                <div class="field-value">{{ defect.location or 'Not specified' }}</div>
+                            </div>
+                            <div class="defect-field">
+                                <div class="field-label">Coordinates</div>
+                                <div class="coordinates">
+                                    X: {{ "%.3f"|format(defect.x) }}<br>
+                                    Y: {{ "%.3f"|format(defect.y) }}<br>
+                                    Z: {{ "%.3f"|format(defect.z) }}
+                                </div>
+                            </div>
+                            <div class="defect-field">
+                                <div class="field-label">Created</div>
+                                <div class="field-value">{{ defect.created_at.strftime('%Y-%m-%d %H:%M') if defect.created_at else 'Unknown' }}</div>
+                            </div>
+                        </div>
+
+                        {% if defect.description %}
+                        <div class="defect-field">
+                            <div class="field-label">Description</div>
+                            <div class="field-value">{{ defect.description }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if defect.image_path %}
+                        <div class="defect-image">
+                            <div class="field-label">Defect Image</div>
+                            <img src="{{ url_for('developer.serve_defect_image', image_path=defect.image_path) }}" alt="Defect image" />
+                        </div>
+                        {% endif %}
+
+                        {% if defect.notes %}
+                        <div class="defect-field">
+                            <div class="field-label">Notes</div>
+                            <div class="field-value">{{ defect.notes }}</div>
+                        </div>
+                        {% endif %}
+
+                        <form method="post" action="{{ url_for('developer.update_defect_progress', defect_id=defect.id) }}" class="update-form" onsubmit="return confirmUpdate()">
+                            <div class="form-group">
+                                <label for="status-{{ defect.id }}">Update Status:</label>
+                                <select id="status-{{ defect.id }}" name="status" required>
+                                    <option value="Reported" {{ 'selected' if defect.status == 'Reported' else '' }}>Reported</option>
+                                    <option value="Under Review" {{ 'selected' if defect.status == 'Under Review' else '' }}>Under Review</option>
+                                    <option value="Fixed" {{ 'selected' if defect.status == 'Fixed' else '' }}>Fixed</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="priority-{{ defect.id }}">Priority:</label>
+                                <select id="priority-{{ defect.id }}" name="priority" required>
+                                    {% set current_priority = defect.priority or 'Medium' %}
+                                    <option value="Urgent" {{ 'selected' if current_priority == 'Urgent' else '' }}>Urgent</option>
+                                    <option value="High" {{ 'selected' if current_priority == 'High' else '' }}>High</option>
+                                    <option value="Medium" {{ 'selected' if current_priority == 'Medium' else '' }}>Medium</option>
+                                    <option value="Low" {{ 'selected' if current_priority == 'Low' else '' }}>Low</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="notes-{{ defect.id }}">Add/Update Notes:</label>
+                                <textarea id="notes-{{ defect.id }}" name="notes" placeholder="Add progress notes, repair details, or status updates...">{{ defect.notes or '' }}</textarea>
+                            </div>
+
+                            <button type="submit" class="btn"><i class="fas fa-save"></i> Update Defect</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if not defects %}
+        <section class="bento-card span-2 empty-state">
+            <i class="fas fa-search"></i>
+            <h3>No Defects Found</h3>
+            <p>This scan doesn't have any defects yet.</p>
+        </section>
+        {% endif %}
+    </main>
 
     <!-- Lightbox -->
     <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -741,17 +517,10 @@
             const count = checkboxes.length;
             const bulkBar = document.getElementById('bulk-actions');
             const countSpan = document.getElementById('selected-count');
-            // IDs are added as dynamic hidden inputs
-            
             if (count > 0) {
                 bulkBar.classList.add('active');
                 countSpan.textContent = count;
-                
-                // Collect selected IDs
                 const ids = Array.from(checkboxes).map(cb => cb.dataset.defectId);
-                // IDs will be added as individual hidden inputs below
-                
-                // Update hidden inputs
                 const form = document.getElementById('bulk-form');
                 form.querySelectorAll('input[name="defect_ids[]"]').forEach(input => input.remove());
                 ids.forEach(id => {
@@ -763,7 +532,8 @@
                 });
             } else {
                 bulkBar.classList.remove('active');
-                document.getElementById('select-all').checked = false;
+                const selectAll = document.getElementById('select-all');
+                if (selectAll) selectAll.checked = false;
             }
         }
 
@@ -788,7 +558,7 @@
             return confirm(`Are you sure you want to update ${count} defect(s)? This action will apply to all selected items.`);
         }
 
-        // ===== Phase 3: Charts, Heatmap, Assignments =====
+        // Charts, heatmap
         let statusChart, priorityChart, trendChart;
 
         function loadChartsData() {
@@ -805,103 +575,33 @@
         function renderStatusChart(statusData) {
             const ctx = document.getElementById('statusChart').getContext('2d');
             if (statusChart) statusChart.destroy();
-            
             statusChart = new Chart(ctx, {
                 type: 'doughnut',
-                data: {
-                    labels: Object.keys(statusData),
-                    datasets: [{
-                        data: Object.values(statusData),
-                        backgroundColor: ['#f97316', '#3b82f6', '#10b981'],
-                        borderColor: 'white',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.label + ': ' + context.parsed;
-                                }
-                            }
-                        }
-                    }
-                }
+                data: { labels: Object.keys(statusData), datasets: [{ data: Object.values(statusData), backgroundColor: ['#f97316', '#3b82f6', '#10b981'], borderColor: '#0b1020', borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: varThemeColor() } } } }
             });
         }
 
         function renderPriorityChart(priorityData) {
             const ctx = document.getElementById('priorityChart').getContext('2d');
             if (priorityChart) priorityChart.destroy();
-            
-            const priorityColors = {
-                'Urgent': '#dc2626',
-                'High': '#f97316',
-                'Medium': '#3b82f6',
-                'Low': '#10b981'
-            };
-            
+            const priorityColors = { 'Urgent': '#dc2626', 'High': '#f97316', 'Medium': '#3b82f6', 'Low': '#10b981' };
             priorityChart = new Chart(ctx, {
                 type: 'bar',
-                data: {
-                    labels: Object.keys(priorityData),
-                    datasets: [{
-                        label: 'Count',
-                        data: Object.values(priorityData),
-                        backgroundColor: Object.keys(priorityData).map(p => priorityColors[p] || '#6b7280'),
-                        borderRadius: 6,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { beginAtZero: true, max: Math.max(...Object.values(priorityData)) + 1 }
-                    }
-                }
+                data: { labels: Object.keys(priorityData), datasets: [{ label: 'Count', data: Object.values(priorityData), backgroundColor: Object.keys(priorityData).map(p => priorityColors[p] || '#6b7280'), borderRadius: 6, borderSkipped: false }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, grid: { color: '#1f2937' } }, y: { grid: { display: false }, ticks: { color: varThemeColor() } } } }
             });
         }
 
         function renderTrendChart(trendData) {
             const ctx = document.getElementById('trendChart').getContext('2d');
             if (trendChart) trendChart.destroy();
-            
             const dates = Object.keys(trendData).sort();
             const counts = dates.map(d => trendData[d]);
-            
             trendChart = new Chart(ctx, {
                 type: 'line',
-                data: {
-                    labels: dates.map(d => new Date(d).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
-                    datasets: [{
-                        label: 'Defects Created',
-                        data: counts,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#3b82f6',
-                        pointBorderColor: 'white',
-                        pointBorderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: { legend: { display: true, position: 'top' } },
-                    scales: {
-                        y: { beginAtZero: true, max: Math.max(...counts) + 1 }
-                    }
-                }
+                data: { labels: dates.map(d => new Date(d).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})), datasets: [{ label: 'Defects Created', data: counts, borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.14)', borderWidth: 2, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#7c3aed', pointBorderColor: '#0b1020', pointBorderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: true, position: 'top', labels: { color: varThemeColor() } } }, scales: { y: { beginAtZero: true, grid: { color: '#1f2937' }, ticks: { color: varThemeColor() } }, x: { grid: { display: false }, ticks: { color: varThemeColor() } } } }
             });
         }
 
@@ -914,36 +614,29 @@
                         container.innerHTML = '<p style="color: #94a3b8;">No location data available</p>';
                         return;
                     }
-
                     const maxWeight = Math.max(...data.priority_weights);
                     const indices = [...data.locations.keys()].sort((a, b) => data.counts[b] - data.counts[a]);
-
                     let html = '<div style="display: flex; flex-direction: column; gap: 6px;">';
                     indices.forEach(idx => {
                         const location = data.locations[idx];
                         const count = data.counts[idx];
                         const intensity = maxWeight > 0 ? (data.priority_weights[idx] / maxWeight) * 100 : 0;
-
                         html += `
-                            <div style="display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid #e2e8f0;">
-                                <div style="flex: 0 0 160px; font-weight: 600; color: #1e293b;">${location}</div>
-                                <div style="color: #64748b; width: 60px; text-align: right;">${count}</div>
-                                <div style="flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
-                                    <div style="height: 100%; width: ${intensity}%; background: linear-gradient(90deg, #dc2626, #f97316);"></div>
-                                </div>
+                            <div class="heat-row">
+                                <div style="flex: 0 0 160px; font-weight: 700; color: #f8fafc;">${location}</div>
+                                <div style="color: #cbd5e1; width: 60px; text-align: right;">${count}</div>
+                                <div class="heat-bar"><span style="width: ${intensity}%;"></span></div>
                             </div>
                         `;
                     });
                     html += '</div>';
-
                     container.innerHTML = html;
                 })
                 .catch(error => console.error('Error loading heatmap:', error));
         }
 
-        
+        function varThemeColor() { return '#e2e8f0'; }
 
-        // Load all on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadChartsData();
             loadHeatmap();
