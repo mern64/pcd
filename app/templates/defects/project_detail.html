@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project {{ scan.name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        .metadata { background: #f4f4f4; padding: 10px; margin-bottom: 20px; }
+        .defects { margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Project: {{ scan.name }}</h1>
+    
+    {% if upload_metadata %}
+    <div class="metadata">
+        <h2>Project Details</h2>
+        <p><strong>Scan Date:</strong> {{ upload_metadata.scan_date }}</p>
+        <p><strong>Location:</strong> {{ upload_metadata.location }}</p>
+        <p><strong>Inspector:</strong> {{ upload_metadata.inspector }}</p>
+        {% if upload_metadata.notes %}
+        <p><strong>Notes:</strong> {{ upload_metadata.notes }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="defects">
+        <h2>Defects ({{ defects|length }})</h2>
+        {% if defects %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Element</th>
+                    <th>Location</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for defect in defects %}
+                <tr>
+                    <td>{{ defect.id }}</td>
+                    <td>{{ defect.element }}</td>
+                    <td>{{ defect.location }}</td>
+                    <td>{{ defect.defect_type }}</td>
+                    <td>{{ defect.severity }}</td>
+                    <td>{{ defect.status }}</td>
+                    <td>{{ defect.description }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No defects found for this project.</p>
+        {% endif %}
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('defects.visualize_scan', scan_id=scan_id) }}">Visualize 3D Model</a> |
+        <a href="{{ url_for('defects.list_projects') }}">Back to Projects</a>
+    </div>
+</body>
+</html>

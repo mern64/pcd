@@ -175,3 +175,26 @@ def serve_defect_image(defect_id):
         abort(404)
     upload_dir = os.path.join(current_app.instance_path, 'uploads', 'upload_data')
     return send_from_directory(upload_dir, defect.image_path)
+
+@defects_bp.route('/project/<int:scan_id>', methods=['GET'])
+def view_project(scan_id):
+    scan = Scan.query.get_or_404(scan_id)
+    defects = Defect.query.filter_by(scan_id=scan_id).all()
+    model_url = url_for('defects.serve_model', scan_id=scan_id) if scan.model_path else None
+    
+    # Try to load upload metadata for project details
+    upload_metadata = None
+    metadata_path = os.path.join(current_app.instance_path, 'uploads', 'upload_data', 'latest_upload.json')
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r') as f:
+                upload_metadata = json.load(f)
+        except Exception as e:
+            print(f"Error loading upload metadata: {e}")
+    
+    return render_template('defects/project_detail.html', 
+                          scan=scan, 
+                          scan_id=scan_id, 
+                          model_url=model_url, 
+                          defects=defects,
+                          upload_metadata=upload_metadata)

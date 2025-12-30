@@ -18,6 +18,8 @@ def create_app():
     db.init_app(app)
 
     with app.app_context():
+        # Import models so SQLAlchemy knows about them before creating tables
+        from . import models
         db.create_all()
 
     # register blueprints
