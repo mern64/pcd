@@ -71,7 +71,7 @@
 
       <label for="address">Property Address</label>
       <div class="address-container">
-        <input id="address" name="address" type="text" placeholder="Start typing to search address..." autocomplete="off" required />
+        <input id="address" name="address" type="text" placeholder="Start typing to search address..." autocomplete="off" />
         <span class="address-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -79,7 +79,7 @@
           </svg>
         </span>
       </div>
-      <span class="help">Search and select address from Google Maps.</span>
+      <span class="help">Search and select address from Google Maps. If not provided, the system will attempt to extract location information from the GLB file metadata.</span>
       <!-- Hidden fields to store lat/lng -->
       <input type="hidden" id="latitude" name="latitude" />
       <input type="hidden" id="longitude" name="longitude" />
@@ -93,12 +93,6 @@
 
       <button type="submit">Upload & Start Processing</button>
     </form>
-
-    <div style="margin-top: 2rem; text-align: center;">
-      <a href="{{ url_for('process_data.process_defect_file') }}" style="color: #2563eb; text-decoration: none; font-weight: 600;">
-        Go to Process Defects
-      </a>
-    </div>
   </main>
 
   <!-- Google Maps Places API with proper async loading -->

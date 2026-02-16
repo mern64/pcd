@@ -259,6 +259,32 @@
             {% endif %}
         </section>
 
+        <!-- Search & Filter Card -->
+        <section class="bento-card span-2 search-card" style="padding: 1rem;">
+            <form method="get" action="{{ url_for('developer.view_scan', scan_id=scan.id) }}" style="display: flex; gap: 0.75rem; align-items: center;">
+                <div style="flex: 1; position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--muted);"></i>
+                    <input type="text" name="search" value="{{ search_query or '' }}" placeholder="Search defects by description, location, type, or notes..." 
+                           style="width: 100%; padding: 0.75rem 1rem 0.75rem 2.8rem; border-radius: 12px; border: 1px solid var(--edge); background: rgba(255,255,255,0.05); color: #f8fafc; font-size: 1rem; outline: none; transition: border-color 0.2s;">
+                </div>
+                
+                <select name="sort_by" onchange="this.form.submit()" style="padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid var(--edge); background: rgba(255,255,255,0.05); color: #f8fafc; font-weight: 600; cursor: pointer; outline: none;">
+                    <option value="created_desc" {% if sort_by == 'created_desc' %}selected{% endif %}>Newest First</option>
+                    <option value="created_asc" {% if sort_by == 'created_asc' %}selected{% endif %}>Oldest First</option>
+                    <option value="priority" {% if sort_by == 'priority' %}selected{% endif %}>Priority (High → Low)</option>
+                    <option value="severity" {% if sort_by == 'severity' %}selected{% endif %}>Severity (High → Low)</option>
+                    <option value="status" {% if sort_by == 'status' %}selected{% endif %}>Status</option>
+                </select>
+
+                <button type="submit" class="btn">Search</button>
+                {% if search_query %}
+                <a href="{{ url_for('developer.view_scan', scan_id=scan.id) }}" class="btn secondary" style="min-width: 80px; justify-content: center;">
+                    <i class="fas fa-times-circle"></i> Clear
+                </a>
+                {% endif %}
+            </form>
+        </section>
+
         {% if defects %}
         <section class="bento-card span-2 bulk-card">
             <div class="select-all-container">

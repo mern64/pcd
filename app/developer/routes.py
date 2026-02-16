@@ -3,7 +3,7 @@ import os
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from app.extensions import db
-from app.models import Scan, Defect
+from app.models import Scan, Defect, DefectStatus, DefectPriority
 
 developer_bp = Blueprint("developer", __name__)
 
@@ -71,6 +71,31 @@ def dashboard():
     total_review = sum(row.review_count for row in scans)
     total_fixed = sum(row.fixed_count for row in scans)
 
+    # --- Dashboard "At a Glance" Metrics ---
+    from datetime import datetime, timedelta
+    
+    # 1. Urgent Attention: High/Urgent priority that are NOT fixed
+    urgent_attention = Defect.query.filter(
+        Defect.priority.in_([DefectPriority.URGENT, DefectPriority.HIGH]),
+        Defect.status != DefectStatus.FIXED
+    ).count()
+
+    # 2. Stale Reviews: 'Under Review' status for > 7 days
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    # Note: tracking strictly by 'updated_at' would be better if we had it on Defect, 
+    # but we can approximate using created_at or join with ActivityLog. 
+    # For now, let's use created_at for simplicity or assume if it's still Under Review it's stale.
+    # A better approach: Join with ActivityLog to find when it was last updated.
+    # Simple proxy: Defects created > 7 days ago still in 'Under Review'
+    stale_reviews = Defect.query.filter(
+        Defect.status == DefectStatus.UNDER_REVIEW,
+        Defect.created_at < seven_days_ago
+    ).count()
+
+    # 3. Recent Activity: Defects created in last 24h
+    last_24h = datetime.utcnow() - timedelta(hours=24)
+    new_defects_24h = Defect.query.filter(Defect.created_at >= last_24h).count()
+
     return render_template(
         "developer/dashboard.html",
         scans=scans,
@@ -81,17 +106,83 @@ def dashboard():
         sort=sort,
         status_filter=status_filter,
         date_range=date_range,
+        metrics={
+            'urgent_attention': urgent_attention,
+            'stale_reviews': stale_reviews,
+            'new_24h': new_defects_24h
+        }
     )
 
 
 @developer_bp.route("/developer/scan/<int:scan_id>", methods=["GET"])
 def view_scan(scan_id):
     """View detailed defects for a specific scan"""
+    from sqlalchemy import or_
+
     scan = Scan.query.get_or_404(scan_id)
-    defects = Defect.query.filter_by(scan_id=scan_id).order_by(Defect.created_at.desc()).all()
+    search_query = request.args.get('search', '').strip()
+
+    # Base query for this scan
+    query = Defect.query.filter_by(scan_id=scan_id)
+
+    # Apply search filter if present
+    if search_query:
+        term = f"%{search_query}%"
+        query = query.filter(
+            or_(
+                Defect.description.ilike(term),
+                Defect.element.ilike(term),
+                Defect.location.ilike(term),
+                Defect.notes.ilike(term),
+                Defect.defect_type.ilike(term)
+            )
+        )
+
+    # Apply sorting
+    sort_by = request.args.get('sort_by', 'created_desc')
+    
+    if sort_by == 'created_asc':
+        query = query.order_by(Defect.created_at.asc())
+    elif sort_by == 'priority':
+        # Custom sort for priority: Urgent > High > Medium > Low
+        # We map them to integers for sorting
+        query = query.order_by(
+            db.case(
+                (Defect.priority == 'Urgent', 4),
+                (Defect.priority == 'High', 3),
+                (Defect.priority == 'Medium', 2),
+                (Defect.priority == 'Low', 1),
+                else_=0
+            ).desc()
+        )
+    elif sort_by == 'severity':
+        # Custom sort for severity
+        query = query.order_by(
+            db.case(
+                (Defect.severity == 'Critical', 4),
+                (Defect.severity == 'High', 3),
+                (Defect.severity == 'Medium', 2),
+                (Defect.severity == 'Low', 1),
+                else_=0
+            ).desc()
+        )
+    elif sort_by == 'status':
+        query = query.order_by(Defect.status.asc())
+    else:
+        # Default: Newest first
+        query = query.order_by(Defect.created_at.desc())
+
+    defects = query.all()
     upload_metadata = _load_latest_upload_metadata()
 
-    return render_template("developer/scan_detail.html", scan=scan, defects=defects, upload_metadata=upload_metadata)
+    return render_template(
+        "developer/scan_detail.html", 
+        scan=scan, 
+        defects=defects, 
+        upload_metadata=upload_metadata,
+        search_query=search_query,
+        sort_by=sort_by
+    )
 
 
 @developer_bp.route("/developer/defect/<int:defect_id>/update", methods=["POST"])
@@ -106,10 +197,14 @@ def update_defect_progress(defect_id):
     new_priority = request.form.get("priority")
     new_notes = request.form.get("notes", "").strip()
 
-    if new_status and new_status not in ['Reported', 'Under Review', 'Fixed']:
+    # Enum validation
+    valid_statuses = [e.value for e in DefectStatus]
+    valid_priorities = [e.value for e in DefectPriority]
+
+    if new_status and new_status not in valid_statuses:
         return jsonify({"success": False, "message": "Invalid status"}), 400
     
-    if new_priority and new_priority not in ['Urgent', 'High', 'Medium', 'Low']:
+    if new_priority and new_priority not in valid_priorities:
         return jsonify({"success": False, "message": "Invalid priority"}), 400
 
     # Log changes
@@ -128,7 +223,7 @@ def update_defect_progress(defect_id):
             defect_id=defect_id,
             scan_id=scan_id,
             action='priority updated',
-            old_value=defect.priority or 'Medium',
+            old_value=defect.priority or DefectPriority.MEDIUM.value,
             new_value=new_priority
         )
         db.session.add(activity)
@@ -205,11 +300,14 @@ def bulk_update_defects(scan_id):
         flash("⚠ No defects selected", "error")
         return redirect(url_for('developer.view_scan', scan_id=scan_id))
     
-    if new_status and new_status not in ['Reported', 'Under Review', 'Fixed']:
+    valid_statuses = [e.value for e in DefectStatus]
+    valid_priorities = [e.value for e in DefectPriority]
+
+    if new_status and new_status not in valid_statuses:
         flash("⚠ Invalid status", "error")
         return redirect(url_for('developer.view_scan', scan_id=scan_id))
     
-    if new_priority and new_priority not in ['Urgent', 'High', 'Medium', 'Low']:
+    if new_priority and new_priority not in valid_priorities:
         flash("⚠ Invalid priority", "error")
         return redirect(url_for('developer.view_scan', scan_id=scan_id))
     
@@ -235,7 +333,7 @@ def bulk_update_defects(scan_id):
                     defect_id=defect.id,
                     scan_id=scan_id,
                     action='priority updated (bulk)',
-                    old_value=defect.priority or 'Medium',
+                    old_value=defect.priority or DefectPriority.MEDIUM.value,
                     new_value=new_priority
                 )
                 db.session.add(activity)

@@ -1,5 +1,23 @@
 from app.extensions import db
 from datetime import datetime
+import enum
+
+class DefectStatus(str, enum.Enum):
+    REPORTED = 'Reported'
+    UNDER_REVIEW = 'Under Review'
+    FIXED = 'Fixed'
+
+class DefectPriority(str, enum.Enum):
+    URGENT = 'Urgent'
+    HIGH = 'High'
+    MEDIUM = 'Medium'
+    LOW = 'Low'
+
+class DefectSeverity(str, enum.Enum):
+    CRITICAL = 'Critical'
+    HIGH = 'High'
+    MEDIUM = 'Medium'
+    LOW = 'Low'
 
 class Scan(db.Model):
     __tablename__ = 'scans'

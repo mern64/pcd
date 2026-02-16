@@ -104,6 +104,9 @@ def _parse_defects_from_file(defect_filepath: str) -> List[DefectRecord]:
                     y=float(coords.get("y", 0.0)),
                     z=float(coords.get("z", 0.0)),
                     source_file=source_file,
+                    element=entry.get("element"),
+                    defect_type=entry.get("defect_type", "Unknown"),
+                    severity=entry.get("severity", "Medium"),
                 )
             )
         except (TypeError, ValueError) as exc:

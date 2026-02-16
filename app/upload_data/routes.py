@@ -7,6 +7,13 @@ from werkzeug.utils import secure_filename
 
 from .pdf_utils import extract_pdf_images
 
+try:
+    from pygltflib import GLTF2
+except ImportError:
+    GLTF2 = None
+
+from app.process_data.glb_snapshot import extract_snapshots
+
 upload_data_bp = Blueprint("upload_data", __name__)
 
 ALLOWED_GLB_EXT = {".glb"}
@@ -96,8 +103,8 @@ def upload_scan_data():
         _start_automated_data_processing(glb_path, pdf_path, scan_date, address, unit_no, notes)
 
         flash("Scan data uploaded successfully. Automated processing has started.", "success")
-        # Redirect back to upload page for now
-        return redirect(url_for("upload_data.upload_scan_data"))
+        # Redirect to process data page
+        return redirect(url_for("process_data.process_defect_file"))
     except Exception as e:
         current_app.logger.error("Error during upload: %s", str(e))
         flash(f"An error occurred during upload: {str(e)}", "error")
@@ -112,7 +119,39 @@ def _start_automated_data_processing(glb_path: str, pdf_path: str, scan_date: st
     current_app.logger.info("Unit No: %s", unit_no)
     if notes:
         current_app.logger.info("Notes: %s", notes)
-    # TODO: implement real processing here
+    
+    # Extract defects from GLB and save to processed folder
+    if GLTF2 is None:
+        current_app.logger.error("pygltflib is not installed; cannot process GLB defects")
+        return
+    
+    try:
+        snapshots = extract_snapshots(glb_path)
+        defects = []
+        for snapshot in snapshots:
+            defects.append({
+                "id": snapshot.snapshot_id,
+                "description": snapshot.label,
+                "coordinates": {
+                    "x": snapshot.coordinates[0],
+                    "y": snapshot.coordinates[1],
+                    "z": snapshot.coordinates[2],
+                },
+                "element": snapshot.element,
+                "defect_type": "Unknown",
+                "severity": "Medium",
+            })
+        
+        # Save to processed folder
+        processed_dir = os.path.join(current_app.instance_path, "processed", "module1")
+        os.makedirs(processed_dir, exist_ok=True)
+        defects_path = os.path.join(processed_dir, "defects.json")
+        with open(defects_path, "w", encoding="utf-8") as fh:
+            json.dump({"defects": defects}, fh, indent=2)
+        
+        current_app.logger.info("Extracted %d defects and saved to %s", len(defects), defects_path)
+    except Exception as e:
+        current_app.logger.error("Error during automated processing: %s", str(e))
 
 
 def _persist_latest_upload_metadata(upload_root: str, payload: dict) -> None:

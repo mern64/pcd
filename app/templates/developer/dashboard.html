@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Developer Dashboard - LIDAR Defect Viewer</title>
+    <title>Claim Dashboard - LIDAR Defect Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -228,7 +228,7 @@
             </div>
 
             <div>
-                <h1><i class="fas fa-code"></i> Developer Dashboard</h1>
+                <h1><i class="fas fa-code"></i> Claim Dashboard</h1>
                 <p class="subtitle">Monitor every scan, filter by status, and glide through project progress with a bento-inspired overview.</p>
                 <div class="hero-metrics">
                     <span class="metric-chip"><i class="fas fa-building"></i> {{ scans|length }} projects</span>
@@ -280,26 +280,28 @@
                 <span class="pill" style="background: rgba(34,211,238,0.12); color: var(--ink);">Auto-updated</span>
             </div>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <h3><i class="fas fa-building"></i> Total Projects</h3>
-                    <div class="stat-number">{{ scans|length }}</div>
-                    <p>Active building scans in system</p>
+                <!-- Actionable Metrics -->
+                <div class="stat-card" style="border-color: rgba(239,68,68,0.35); background: linear-gradient(160deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04));">
+                    <h3 style="color: #fca5a5;"><i class="fas fa-fire" style="color: #ef4444;"></i> Urgent Items</h3>
+                    <div class="stat-number" style="color: #fecdd3;">{{ metrics.urgent_attention }}</div>
+                    <p style="color: rgba(254,205,211,0.7);">High priority needing fix</p>
                 </div>
 
-                <div class="stat-card">
-                    <h3><i class="fas fa-exclamation-triangle"></i> Total Defects</h3>
-                    <div class="stat-number">{{ total_defects }}</div>
-                    <p>Defects across all projects</p>
+                <div class="stat-card" style="border-color: rgba(245,158,11,0.35); background: linear-gradient(160deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04));">
+                    <h3 style="color: #fcd34d;"><i class="fas fa-clock" style="color: #f59e0b;"></i> Stale Reviews</h3>
+                    <div class="stat-number" style="color: #fde68a;">{{ metrics.stale_reviews }}</div>
+                    <p style="color: rgba(253,230,138,0.7);">Pending > 7 days</p>
                 </div>
 
-                <div class="stat-card">
-                    <h3><i class="fas fa-clock"></i> Under Review</h3>
-                    <div class="stat-number">{{ total_review }}</div>
-                    <p>Defects currently being reviewed</p>
+                <div class="stat-card" style="border-color: rgba(59,130,246,0.35); background: linear-gradient(160deg, rgba(59,130,246,0.12), rgba(59,130,246,0.04));">
+                    <h3 style="color: #bfdbfe;"><i class="fas fa-bolt" style="color: #3b82f6;"></i> New (24h)</h3>
+                    <div class="stat-number" style="color: #dbeafe;">{{ metrics.new_24h }}</div>
+                    <p style="color: rgba(219,234,254,0.7);">Defects reported today</p>
                 </div>
 
+                <!-- General Stats -->
                 <div class="stat-card">
-                    <h3><i class="fas fa-check-circle"></i> Fixed</h3>
+                    <h3><i class="fas fa-check-circle"></i> Total Fixed</h3>
                     <div class="stat-number">{{ total_fixed }}</div>
                     <p>Defects marked as resolved</p>
                 </div>
@@ -311,7 +313,7 @@
             <div class="projects-header">
                 <div>
                     <p class="pill">Portfolio</p>
-                    <h2 style="margin-top: 0.35rem;">Projects</h2>
+                    <h2 style="margin-top: 0.35rem;">Claims</h2>
                 </div>
                 <span class="pill">{{ scans|length }} items</span>
             </div>
