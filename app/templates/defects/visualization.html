@@ -45,6 +45,7 @@
         body.light-mode .defect-card { background: #f8fafc; border-color: #e2e8f0; }
         body.light-mode .defect-card:hover { border-color: #cbd5e1; }
         body.light-mode .defect-card.expanded, body.light-mode .defect-card.selected { background: #dbeafe; border-color: #3b82f6; }
+        body.light-mode .defect-card.hovered { background: #e0f2fe; border-color: #0ea5e9; box-shadow: 0 0 12px rgba(14, 165, 233, 0.3); }
         body.light-mode .defect-title { color: #1e293b; }
         body.light-mode .defect-description { color: #64748b; }
         body.light-mode .defect-coords { color: #94a3b8; }
@@ -151,6 +152,7 @@
         .defect-card:hover { border-color: #475569; transform: translateX(2px); }
         .defect-card.selected { border-color: #3b82f6; background: #1e3a5f; }
         .defect-card.expanded { border-color: #3b82f6; background: #1e3a5f; }
+        .defect-card.hovered { border-color: #22d3ee; background: #164e63; box-shadow: 0 0 12px rgba(34, 211, 238, 0.3); transform: translateX(4px); }
         
         .defect-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
         .defect-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; }
@@ -703,6 +705,13 @@
         let modelCenter = BABYLON.Vector3.Zero();
         let modelLoaded = false;
         let modelBounds = { min: null, max: null, size: null };
+        let hoveredMarker = null;
+        let selectedMarker = null;
+        
+        // Glow layer for highlighted markers
+        const glowLayer = new BABYLON.GlowLayer("glowLayer", scene);
+        glowLayer.intensity = 0.8;
+        glowLayer.blurKernelSize = 32;
         
         // Load 3D model
         let rootMesh = null;
@@ -807,7 +816,10 @@
             }
             
             listEl.innerHTML = defects.map((d, index) => `
-                <div class="defect-card" data-id="${d.defectId}" id="card-${d.defectId}" onclick="toggleDefectCard(${d.defectId})">
+                <div class="defect-card" data-id="${d.defectId}" id="card-${d.defectId}" 
+                     onclick="toggleDefectCard(${d.defectId})"
+                     onmouseenter="highlightMarkerForDefect(${d.defectId}, true)"
+                     onmouseleave="highlightMarkerForDefect(${d.defectId}, false)">
                     <div class="defect-header">
                         <span class="defect-title">
                             <i class="fas fa-exclamation-circle" style="color: ${getSeverityColorHex(d.severity)};"></i>
@@ -1090,7 +1102,113 @@
             }
         });
         
+        // Hover handler for markers
+        scene.onPointerObservable.add((pointerInfo) => {
+            if (pointerInfo.type === BABYLON.PointerEventTypes.POINTERMOVE) {
+                const pickResult = scene.pick(scene.pointerX, scene.pointerY);
+                
+                // Reset previous hovered marker
+                if (hoveredMarker && hoveredMarker !== selectedMarker) {
+                    hoveredMarker.scaling = new BABYLON.Vector3(1, 1, 1);
+                    glowLayer.removeIncludedOnlyMesh(hoveredMarker);
+                    // Also unhighlight the corresponding card
+                    const prevDefectId = hoveredMarker.defectId || (hoveredMarker.snapshotIndex !== undefined && defectsData[hoveredMarker.snapshotIndex]?.defectId);
+                    if (prevDefectId) {
+                        const prevCard = document.getElementById('card-' + prevDefectId);
+                        if (prevCard) prevCard.classList.remove('hovered');
+                    }
+                }
+                hoveredMarker = null;
+                
+                if (pickResult.hit && pickResult.pickedMesh.name.startsWith('marker')) {
+                    hoveredMarker = pickResult.pickedMesh;
+                    // Scale up on hover
+                    hoveredMarker.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+                    // Add glow
+                    glowLayer.addIncludedOnlyMesh(hoveredMarker);
+                    // Change cursor
+                    canvas.style.cursor = 'pointer';
+                    
+                    // Highlight corresponding card in sidebar
+                    const defectId = hoveredMarker.defectId || (hoveredMarker.snapshotIndex !== undefined && defectsData[hoveredMarker.snapshotIndex]?.defectId);
+                    if (defectId) {
+                        const card = document.getElementById('card-' + defectId);
+                        if (card) {
+                            card.classList.add('hovered');
+                            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    }
+                } else {
+                    canvas.style.cursor = 'grab';
+                }
+            }
+        });
+        
+        // Highlight marker when hovering on card (called from card mouseenter)
+        function highlightMarkerForDefect(defectId, highlight) {
+            const defectIndex = defectsData.findIndex(d => d.defectId === defectId);
+            if (defectIndex >= 0 && defectIndex < markers.length) {
+                const marker = markers[defectIndex];
+                if (highlight) {
+                    marker.scaling = new BABYLON.Vector3(1.5, 1.5, 1.5);
+                    glowLayer.addIncludedOnlyMesh(marker);
+                } else {
+                    if (marker !== selectedMarker) {
+                        marker.scaling = new BABYLON.Vector3(1, 1, 1);
+                        glowLayer.removeIncludedOnlyMesh(marker);
+                    }
+                }
+            }
+        }
+        
+        // Smooth camera animation to target position
+        function animateCameraToTarget(targetPosition, targetRadius = 3, duration = 800) {
+            const fps = 60;
+            const totalFrames = (duration / 1000) * fps;
+            
+            // Animate camera target
+            const targetAnim = new BABYLON.Animation(
+                "cameraTargetAnim",
+                "target",
+                fps,
+                BABYLON.Animation.ANIMATIONTYPE_VECTOR3,
+                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+            targetAnim.setKeys([
+                { frame: 0, value: camera.target.clone() },
+                { frame: totalFrames, value: targetPosition }
+            ]);
+            
+            // Animate camera radius
+            const radiusAnim = new BABYLON.Animation(
+                "cameraRadiusAnim",
+                "radius",
+                fps,
+                BABYLON.Animation.ANIMATIONTYPE_FLOAT,
+                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+            );
+            radiusAnim.setKeys([
+                { frame: 0, value: camera.radius },
+                { frame: totalFrames, value: targetRadius }
+            ]);
+            
+            // Add easing
+            const easingFunction = new BABYLON.QuadraticEase();
+            easingFunction.setEasingMode(BABYLON.EasingFunction.EASINGMODE_EASEINOUT);
+            targetAnim.setEasingFunction(easingFunction);
+            radiusAnim.setEasingFunction(easingFunction);
+            
+            camera.animations = [targetAnim, radiusAnim];
+            scene.beginAnimation(camera, 0, totalFrames, false);
+        }
+        
         function selectDefect(defectId) {
+            // Deselect previous marker
+            if (selectedMarker) {
+                selectedMarker.scaling = new BABYLON.Vector3(1, 1, 1);
+                glowLayer.removeIncludedOnlyMesh(selectedMarker);
+            }
+            
             document.querySelectorAll('.defect-card').forEach(c => c.classList.remove('selected', 'expanded'));
             const card = document.querySelector(`.defect-card[data-id="${defectId}"]`);
             if (card) {
@@ -1098,19 +1216,27 @@
                 loadDefectDetails(defectId);
                 card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
+            
+            // Select new marker
+            const defectIndex = defectsData.findIndex(d => d.defectId === defectId);
+            if (defectIndex >= 0 && defectIndex < markers.length) {
+                selectedMarker = markers[defectIndex];
+                selectedMarker.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
+                glowLayer.addIncludedOnlyMesh(selectedMarker);
+            }
         }
         
         function focusDefect(defectId) {
             const defectIndex = defectsData.findIndex(d => d.defectId === defectId);
             if (defectIndex >= 0 && defectIndex < markers.length) {
                 const marker = markers[defectIndex];
-                camera.target = marker.position.clone();
-                camera.radius = 3;
+                // Smooth camera animation instead of instant jump
+                animateCameraToTarget(marker.position.clone(), 3, 800);
             } else {
                 const defect = defectsData.find(d => d.defectId === defectId);
                 if (defect) {
-                    camera.target = new BABYLON.Vector3(defect.x, defect.y, defect.z);
-                    camera.radius = 3;
+                    const targetPos = new BABYLON.Vector3(defect.x, defect.y, defect.z);
+                    animateCameraToTarget(targetPos, 3, 800);
                 }
             }
             selectDefect(defectId);
