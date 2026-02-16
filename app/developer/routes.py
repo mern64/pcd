@@ -8,9 +8,30 @@ from app.models import Scan, Defect, DefectStatus, DefectPriority
 developer_bp = Blueprint("developer", __name__)
 
 
-def _load_latest_upload_metadata():
-    """Load latest upload metadata (address, unit, scan date) for display."""
+def _load_latest_upload_metadata(scan_id: int | None = None):
+    """Load upload metadata for display.
+
+    If a scan_id is provided, we first try to load a per-scan
+    metadata snapshot (scan_<id>_metadata.json). This keeps each
+    project tied to the upload details from when it was created
+    instead of all scans sharing the same latest_upload.json.
+    """
     upload_root = os.path.join(current_app.instance_path, "uploads", "upload_data")
+
+    # Prefer per-scan metadata if we know the scan id
+    if scan_id is not None:
+        per_scan_path = os.path.join(upload_root, f"scan_{scan_id}_metadata.json")
+        if os.path.exists(per_scan_path):
+            try:
+                with open(per_scan_path, "r", encoding="utf-8") as fh:
+                    return json.load(fh)
+            except (OSError, json.JSONDecodeError):
+                current_app.logger.warning(
+                    "Could not read per-scan upload metadata for scan %s", scan_id, exc_info=True
+                )
+
+    # Fallback to the legacy latest_upload.json (used primarily for
+    # scans created before per-scan snapshots existed).
     metadata_path = os.path.join(upload_root, "latest_upload.json")
     if not os.path.exists(metadata_path):
         return None
@@ -173,7 +194,7 @@ def view_scan(scan_id):
         query = query.order_by(Defect.created_at.desc())
 
     defects = query.all()
-    upload_metadata = _load_latest_upload_metadata()
+    upload_metadata = _load_latest_upload_metadata(scan_id)
 
     return render_template(
         "developer/scan_detail.html", 

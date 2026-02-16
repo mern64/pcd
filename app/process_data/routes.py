@@ -57,6 +57,16 @@ def _metadata_path() -> str:
     return os.path.join(_upload_root(), "latest_upload.json")
 
 
+def _scan_metadata_path(scan_id: int) -> str:
+    """Return the metadata path for a specific scan.
+
+    We store a snapshot of latest_upload.json per Scan so that
+    each project keeps its original upload details instead of
+    all projects sharing the global latest_upload.json.
+    """
+    return os.path.join(_upload_root(), f"scan_{scan_id}_metadata.json")
+
+
 def _glb_search_directories() -> List[str]:
     return [_processed_root(), _upload_root()]
 
@@ -193,6 +203,21 @@ def _load_latest_metadata() -> Optional[dict]:
 
 def _save_latest_metadata(metadata: dict) -> None:
     metadata_file = _metadata_path()
+    os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
+    with open(metadata_file, "w", encoding="utf-8") as fh:
+        json.dump(metadata, fh, indent=2)
+
+
+def _save_scan_metadata(scan_id: int, metadata: dict) -> None:
+    """Persist a copy of upload metadata for a specific Scan.
+
+    This prevents older projects from being "overwritten" when a new
+    upload updates latest_upload.json, by giving each scan its own
+    stable metadata snapshot.
+    """
+    if not metadata:
+        return
+    metadata_file = _scan_metadata_path(scan_id)
     os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
     with open(metadata_file, "w", encoding="utf-8") as fh:
         json.dump(metadata, fh, indent=2)
@@ -372,6 +397,11 @@ def process_defect_file():
             )
             db.session.add(defect)
         db.session.commit()
+
+        # Persist a per-scan copy of the upload metadata so that
+        # each project keeps its own project details.
+        if metadata:
+            _save_scan_metadata(scan.id, metadata)
 
         flash(f"Defects saved to database. Scan ID: {scan.id}", "success")
         return redirect(url_for("defects.visualize_scan", scan_id=scan.id))
